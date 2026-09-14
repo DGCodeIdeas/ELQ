@@ -1,0 +1,413 @@
+<!-- Focus Mode Background Overlay -->
+@if (isFocusMode()) {
+  <div class="fixed inset-0 bg-[#fbfbfa] z-10 transition-opacity duration-300"></div>
+}
+
+<div class="min-h-full transition-all relative flex flex-col items-center pt-4 sm:pt-6 pb-32 w-full px-2 sm:px-4" [class.z-20]="isFocusMode()">
+  
+  @if (blockService.isLoading()) {
+    <div class="w-full max-w-[816px] animate-pulse mt-8 space-y-8 bg-white p-8 sm:p-20 shadow-sm rounded-2xl border border-gray-100">
+      <div class="h-10 w-3/4 bg-gray-100 rounded-xl"></div>
+      <div class="space-y-4">
+        <div class="h-4 bg-gray-100 rounded w-full"></div>
+        <div class="h-4 bg-gray-100 rounded w-full"></div>
+        <div class="h-4 bg-gray-100 rounded w-5/6"></div>
+      </div>
+    </div>
+  } @else {
+    <!-- Floating Toolbar -->
+    <div class="sticky top-2 sm:top-3 z-40 flex items-center justify-center gap-1.5 sm:gap-2 mb-3 sm:mb-4 max-w-full px-2 overflow-x-auto no-scrollbar py-1">
+      <!-- Formatting Tools -->
+      <div class="flex items-center gap-0.5 sm:gap-1 bg-white/95 backdrop-blur-md border border-gray-200/80 p-1 sm:p-1.5 rounded-full shadow-lg ring-1 ring-black/5 shrink-0">
+        <button (click)="exec('formatBlock', 'h1')" (mousedown)="$event.preventDefault()" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-gray-100 rounded-full text-gray-700 font-bold text-xs" title="Heading 1">H1</button>
+        <button (click)="exec('formatBlock', 'h2')" (mousedown)="$event.preventDefault()" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-gray-100 rounded-full text-gray-700 font-bold text-xs" title="Heading 2">H2</button>
+        <div class="w-px h-4 bg-gray-200 mx-0.5"></div>
+        <button (click)="exec('bold')" (mousedown)="$event.preventDefault()" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-gray-100 rounded-full text-gray-700 font-bold text-xs" title="Bold">B</button>
+        <button (click)="exec('italic')" (mousedown)="$event.preventDefault()" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-gray-100 rounded-full text-gray-700 italic font-serif text-xs" title="Italic">I</button>
+        <button (click)="exec('underline')" (mousedown)="$event.preventDefault()" class="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center hover:bg-gray-100 rounded-full text-gray-700 underline text-xs" title="Underline">U</button>
+      </div>
+
+      <!-- Linguix Quality Check Button -->
+      <button 
+        (click)="runLinguixScan()" 
+        [disabled]="isScanning()"
+        class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full shadow-lg ring-1 ring-black/5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-semibold transition-all shrink-0"
+        title="Linguix AI Grammar & Quality Inspector"
+      >
+        @if (isScanning()) {
+          <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span>Scanning...</span>
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span class="hidden sm:inline">Linguix Check</span>
+          <span class="sm:hidden">Linguix</span>
+          @if (scanResults().length > 0) {
+            <span class="w-4 h-4 rounded-full bg-white text-emerald-800 text-[10px] font-bold flex items-center justify-center">
+              {{ scanResults().length }}
+            </span>
+          }
+        }
+      </button>
+
+      <!-- Processing Mode Toggle Button (Neutral Parity) -->
+      <button 
+        (click)="blockService.toggleProcessingMode()" 
+        [class]="'flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full shadow-lg ring-1 ring-black/5 text-xs font-semibold transition-all shrink-0 ' + 
+          (blockService.isUnfiltered() 
+            ? 'bg-slate-900 hover:bg-slate-800 text-white' 
+            : 'bg-white hover:bg-slate-50 text-slate-800 border border-slate-200')"
+        [title]="blockService.isUnfiltered() ? 'Mode: Unfiltered (Impartial & Direct). Click to switch to Filtered.' : 'Mode: Filtered (Moderated & Redacted). Click to switch to Unfiltered.'"
+      >
+        @if (blockService.isUnfiltered()) {
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>
+          </svg>
+          <span class="hidden sm:inline">Unfiltered</span>
+          <span class="sm:hidden">Unfiltered</span>
+        } @else {
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="3" y2="3"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="9" x2="9" y1="8" y2="16"/><line x1="15" x2="15" y1="8" y2="16"/>
+          </svg>
+          <span class="hidden sm:inline">Filtered</span>
+          <span class="sm:hidden">Filtered</span>
+          @if (blockService.sensitiveTermsCount() > 0) {
+            <span class="w-4 h-4 rounded-full bg-slate-200 text-slate-800 text-[10px] font-bold flex items-center justify-center">
+              {{ blockService.sensitiveTermsCount() }}
+            </span>
+          }
+        }
+      </button>
+
+      <!-- Focus Mode Toggle -->
+      <button 
+        (click)="toggleFocusMode()" 
+        [class]="'flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 rounded-full shadow-lg ring-1 ring-black/5 transition-all text-xs font-medium shrink-0 ' + 
+          (isFocusMode() ? 'bg-gray-900 text-white hover:bg-black' : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200')"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/>
+        </svg>
+        <span class="hidden sm:inline">{{ isFocusMode() ? 'Exit Focus' : 'Focus Mode' }}</span>
+        <span class="sm:hidden">{{ isFocusMode() ? 'Exit' : 'Focus' }}</span>
+      </button>
+    </div>
+
+    <!-- The "Paper" Container -->
+    <div class="w-full max-w-[816px] bg-white min-h-[750px] shadow-xl ring-1 ring-gray-900/5 px-6 sm:px-16 md:px-24 py-10 sm:py-16 relative transition-all rounded-2xl flex flex-col">
+      
+      <!-- Document State Header Banner (Neutral Parity) -->
+      @if (!blockService.isUnfiltered()) {
+        <div class="mb-5 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-800 font-sans">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center justify-center w-5 h-5 rounded-md bg-slate-200 text-slate-700 text-[11px] font-semibold">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="21" y2="21"/><line x1="4" x2="20" y1="3" y2="3"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="9" x2="9" y1="8" y2="16"/><line x1="15" x2="15" y1="8" y2="16"/></svg>
+            </span>
+            <span><strong>Filtered Mode:</strong> Standard content moderation and visual redactions active.</span>
+            @if (blockService.sensitiveTermsCount() > 0) {
+              <span class="bg-slate-200/80 text-slate-700 text-[10px] px-2 py-0.5 rounded-full font-medium">
+                {{ blockService.sensitiveTermsCount() }} flagged {{ blockService.sensitiveTermsCount() === 1 ? 'term' : 'terms' }}
+              </span>
+            }
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- Style Selector -->
+            <select 
+              [ngModel]="blockService.censorshipConfig().redactionStyle"
+              (ngModelChange)="blockService.setCensorshipRedactionStyle($event)"
+              class="bg-white border border-slate-300 text-slate-800 text-xs rounded-lg px-2 py-1 outline-none font-medium cursor-pointer"
+              title="Change visual redaction style"
+            >
+              <option value="spoiler">Spoiler (Hover to reveal)</option>
+              <option value="blackbar">Black Bar (Masked)</option>
+              <option value="blur">Blur</option>
+              <option value="asterisks">Asterisks (***)</option>
+              <option value="redact_pill">[REDACTED] Pill</option>
+            </select>
+            
+            <button 
+              (click)="showRedactedPreview.set(!showRedactedPreview())"
+              [class]="'px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors ' + 
+                (showRedactedPreview() ? 'bg-slate-900 text-white' : 'bg-white text-slate-800 hover:bg-slate-100 border border-slate-300')"
+            >
+              {{ showRedactedPreview() ? 'Edit Content' : 'Preview Redactions' }}
+            </button>
+
+            <button 
+              (click)="blockService.setProcessingMode('unfiltered')"
+              class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 transition-colors"
+              title="Switch to Unfiltered Mode"
+            >
+              Switch to Unfiltered
+            </button>
+          </div>
+        </div>
+      } @else {
+        <div class="mb-5 px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 text-xs text-slate-800 font-sans">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center justify-center w-5 h-5 rounded-md bg-slate-900 text-white text-[11px] font-semibold">
+              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+            </span>
+            <span><strong>Unfiltered Mode:</strong> Direct, unmoderated processing. Zero redactions, unbiased assistance, and complete creative latitude.</span>
+          </div>
+          <button 
+            (click)="blockService.setProcessingMode('filtered')"
+            class="px-2.5 py-1 rounded-lg text-xs font-medium bg-white text-slate-700 hover:bg-slate-100 border border-slate-300 transition-colors shrink-0"
+            title="Switch to Filtered Mode"
+          >
+            Switch to Filtered
+          </button>
+        </div>
+      }
+
+      <!-- Book Title -->
+      <div class="mb-6 border-b border-gray-100 pb-5">
+        <input
+          [ngModel]="blockService.docTitle()"
+          (ngModelChange)="blockService.updateTitle($event)"
+          placeholder="Document Title"
+          class="text-2xl sm:text-3xl font-bold text-gray-900 placeholder-gray-300 border-none outline-none w-full bg-transparent font-serif text-center"
+        />
+      </div>
+
+      <!-- Chapter Title Input -->
+      <input
+        [ngModel]="blockService.activeChapterTitle()"
+        (ngModelChange)="blockService.updateActiveChapterTitle($event)"
+        placeholder="Chapter Title"
+        class="text-xl sm:text-2xl font-semibold text-gray-800 placeholder-gray-300 border-none outline-none w-full bg-transparent font-serif mb-6"
+      />
+
+      <!-- Active Chapter Content (Redacted View or Editable Editor) -->
+      @if (showRedactedPreview() && !blockService.isUncensored()) {
+        <div 
+          class="prose prose-slate max-w-none focus:outline-none min-h-[50vh] text-gray-800 leading-relaxed font-serif flex-1 text-base sm:text-lg select-text"
+          [innerHTML]="redactedSafeContent()"
+        ></div>
+      } @else {
+        <div 
+          #editor
+          contenteditable="true"
+          class="prose prose-slate max-w-none focus:outline-none min-h-[50vh] text-gray-800 leading-relaxed font-serif flex-1 text-base sm:text-lg"
+          [innerHTML]="safeContent()"
+          (input)="onInput($event)"
+          (paste)="onPaste($event)"
+          (blur)="onBlur()"
+          (mouseup)="onMouseUp($event)"
+          (keyup)="onKeyUp($event)"
+          placeholder="Start writing freely. Use formatting tools or type '/' for structure..."
+        ></div>
+      }
+      
+      <!-- Chapter Navigation Footer -->
+      <div class="mt-12 pt-6 border-t border-gray-100 flex justify-between items-center text-xs text-gray-400 font-sans">
+        <button (click)="prevChapter()" class="hover:text-gray-900 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+          ← Previous
+        </button>
+        <span class="font-medium">Chapter {{ (blockService.activeChapterIndex() + 1) }} of {{ blockService.chapters().length }}</span>
+        <button (click)="nextChapter()" class="hover:text-gray-900 flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+          Next →
+        </button>
+      </div>
+    </div>
+  }
+</div>
+
+<!-- Linguix Review Slide-over Panel -->
+@if (showReviewDrawer()) {
+  <div class="fixed bottom-4 right-4 z-50 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[80vh] animate-in slide-in-from-bottom-5 duration-200">
+    
+    <!-- Drawer Header -->
+    <div class="px-4 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+          ✓
+        </div>
+        <div>
+          <h3 class="text-xs font-bold text-gray-900">Linguix Quality Score</h3>
+          <p class="text-[10px] text-gray-500">Intelligent grammar & clarity analysis</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        @if (linguixScore() !== null) {
+          <span class="px-2 py-0.5 rounded-full text-xs font-black bg-white text-emerald-700 shadow-sm border border-emerald-200">
+            {{ linguixScore() }}/100
+          </span>
+        }
+        <button (click)="showReviewDrawer.set(false)" class="text-gray-400 hover:text-gray-600 p-1 rounded-md">
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="p-4 overflow-y-auto space-y-3 flex-1">
+      @if (scanResults().length > 0) {
+        <div class="flex items-center justify-between pb-2 border-b border-gray-100">
+          <span class="text-xs font-semibold text-gray-700">{{ scanResults().length }} improvements found</span>
+          <button (click)="applyAllSuggestions()" class="text-xs text-emerald-600 hover:text-emerald-700 font-bold hover:underline">
+            Accept All
+          </button>
+        </div>
+
+        <div class="space-y-2.5">
+          @for (s of scanResults(); track $index) {
+            <div class="p-3 rounded-xl border border-gray-200 bg-gray-50/50 hover:bg-gray-50 space-y-1.5 transition-colors">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-white text-gray-600 border border-gray-200">
+                  {{ s.type }}
+                </span>
+                <span class="text-[10px] text-gray-400">{{ s.explanation }}</span>
+              </div>
+
+              <div class="text-xs">
+                <span class="line-through text-red-500 bg-red-50 px-1 py-0.5 rounded mr-1.5">{{ s.original }}</span>
+                <span class="text-emerald-700 font-semibold bg-emerald-50 px-1 py-0.5 rounded">→ {{ s.suggestion }}</span>
+              </div>
+
+              <div class="flex items-center justify-end gap-2 pt-1">
+                <button (click)="dismissSuggestion(s)" class="text-[11px] text-gray-400 hover:text-gray-600 px-2 py-0.5 rounded hover:bg-gray-200/50">
+                  Dismiss
+                </button>
+                <button (click)="acceptSuggestion(s)" class="text-[11px] font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 rounded-md shadow-xs">
+                  Apply Fix
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (scanMessage()) {
+        <div class="py-8 text-center text-xs text-amber-800 space-y-2 bg-amber-50/70 p-4 rounded-xl border border-amber-200">
+          <p class="font-semibold">{{ scanMessage() }}</p>
+        </div>
+      } @else if (isScanning()) {
+        <div class="py-12 text-center text-xs text-gray-400 space-y-2">
+          <div class="animate-spin text-lg">⚙</div>
+          <p>Analyzing document for grammar, syntax, and tone enhancements...</p>
+        </div>
+      } @else {
+        <div class="py-8 text-center text-xs text-gray-500 space-y-2">
+          <div class="w-10 h-10 mx-auto rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+            ✓
+          </div>
+          <p class="font-semibold text-gray-800">Your text is looking sharp!</p>
+          <p class="text-gray-400 text-[11px]">No grammatical, spelling, or clarity errors detected.</p>
+        </div>
+      }
+    </div>
+
+  </div>
+}
+
+<!-- Floating Paraphrase Menu -->
+@if (showParaphraseMenu()) {
+  <div 
+    class="fixed z-50 transform -translate-x-1/2 -translate-y-full mb-2 flex items-center bg-gray-900 text-white rounded-lg shadow-xl border border-gray-700/50 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+    [style.top.px]="floatingMenuPos().top"
+    [style.left.px]="floatingMenuPos().left"
+  >
+    <button 
+      (click)="exec('bold'); showParaphraseMenu.set(false)"
+      (mousedown)="$event.preventDefault()" 
+      class="px-2.5 py-1.5 hover:bg-gray-800 font-bold text-sm transition-colors border-r border-gray-700"
+      title="Bold"
+    >B</button>
+    <button 
+      (click)="exec('italic'); showParaphraseMenu.set(false)"
+      (mousedown)="$event.preventDefault()" 
+      class="px-2.5 py-1.5 hover:bg-gray-800 italic font-serif text-sm transition-colors border-r border-gray-700"
+      title="Italic"
+    >I</button>
+    <button 
+      (click)="openParaphraseDrawer()"
+      (mousedown)="$event.preventDefault()" 
+      class="flex items-center gap-1.5 px-3 py-1.5 hover:bg-indigo-600 text-xs font-semibold text-indigo-50 transition-colors"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg>
+      Paraphrase
+    </button>
+  </div>
+}
+
+<!-- Paraphrase Drawer -->
+@if (showParaphraseDrawer()) {
+  <div class="fixed top-4 right-4 z-50 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-right-8 duration-300">
+    
+    <!-- Drawer Header -->
+    <div class="px-4 py-3 bg-gradient-to-r from-indigo-50 to-purple-50 border-b border-indigo-100 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div>
+          <h3 class="text-xs font-bold text-gray-900">AI Paraphrase</h3>
+          <p class="text-[10px] text-gray-500">Rewrite your text in a different style</p>
+        </div>
+      </div>
+      <button (click)="closeParaphraseDrawer()" class="text-gray-400 hover:text-gray-600 p-1 rounded-md">✕</button>
+    </div>
+
+    <!-- Style Selector -->
+    <div class="px-4 py-3 border-b border-gray-100 bg-gray-50 flex flex-col gap-2">
+      <label class="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Document Style</label>
+      <div class="flex gap-2">
+        <select 
+          [ngModel]="selectedParaphraseStyle()"
+          (ngModelChange)="selectedParaphraseStyle.set($event)"
+          class="flex-1 bg-white border border-gray-300 text-gray-800 text-xs rounded-lg px-2.5 py-1.5 outline-none font-medium cursor-pointer shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+        >
+          @for (style of paraphraseStyles; track style) {
+            <option [value]="style">{{ style }}</option>
+          }
+        </select>
+        <button 
+          (click)="runParaphrase()"
+          [disabled]="isParaphrasing()"
+          class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm disabled:opacity-50 transition-colors"
+        >
+          Rewrite
+        </button>
+      </div>
+      <div class="mt-2 text-xs text-gray-600 p-2 bg-white rounded border border-gray-100 shadow-inner line-clamp-3 italic">
+        "{{ selectionText() }}"
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="p-4 overflow-y-auto space-y-3 flex-1">
+      @if (isParaphrasing()) {
+        <div class="py-10 flex flex-col items-center justify-center text-center text-gray-400 space-y-3">
+          <svg class="animate-spin h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+          <span class="text-xs font-medium">Generating brilliant alternatives...</span>
+        </div>
+      } @else if (paraphraseResults().length > 0) {
+        @for (alt of paraphraseResults(); track $index) {
+          <div class="p-3 rounded-xl border border-gray-200 bg-white hover:border-indigo-300 hover:shadow-md transition-all group">
+            <p class="text-sm text-gray-800 font-serif leading-relaxed mb-2">{{ alt.text }}</p>
+            <div class="flex items-end justify-between mt-3 pt-2 border-t border-gray-50">
+              <span class="text-[10px] text-gray-400 max-w-[70%] leading-tight">{{ alt.explanation }}</span>
+              <button 
+                (click)="applyParaphrase(alt)"
+                class="text-[11px] font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white px-2.5 py-1 rounded-md transition-colors shrink-0"
+              >
+                Use This
+              </button>
+            </div>
+          </div>
+        }
+      } @else {
+        <div class="py-10 text-center text-xs text-gray-400">
+          <p>Click "Rewrite" to generate alternatives.</p>
+        </div>
+      }
+    </div>
+  </div>
+}
