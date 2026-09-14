@@ -56,6 +56,7 @@ export interface Document {
   goals?: WritingGoals;
   isUncensored?: boolean;
   censorshipConfig?: CensorshipConfig;
+  documentType?: string;
 }
 
 @Injectable({

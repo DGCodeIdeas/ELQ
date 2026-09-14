@@ -1,6 +1,6 @@
 {
   "name": "Eloqui - Private AI Writing Assistant & Block Editor",
-  "description": "A Notion-style block editor with Linguix-style intelligent grammar and style suggestions, BYOK zero-knowledge privacy, custom model integration, and writing productivity analytics.",
+  "description": "A Notion-style block editor with Linguix-style quality inspector, document-aware AI paraphrasing across fiction (SFW/NSFW), academic, and legal registers, BYOK zero-knowledge privacy, and writing productivity analytics.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

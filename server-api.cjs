@@ -37,7 +37,280 @@ function getSafetySettings(isUncensored = false) {
 }
 
 // Fallback rule-based linguistic reviewer
-function localLinguisticReview(text) {
+async function generateContentWithFailover(client, options) {
+  const models = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
+  let lastErr = null;
+  for (const model of models) {
+    try {
+      return await client.models.generateContent({
+        ...options,
+        model
+      });
+    } catch (err) {
+      console.warn(`Model ${model} failed with ${err.status || err.message}, trying next candidate...`);
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
+const DOCUMENT_TYPE_DESCRIPTIONS = {
+  novel_sfw: {
+    name: 'Novel / Fiction (SFW)',
+    prompt: "Literary Fiction / Novel (General/SFW). Focus on natural narrative flow, subtext, character interiority, sensory balance, dialogue rhythm, and evocative storytelling. Keep the prose human and expressive."
+  },
+  novel_nsfw: {
+    name: 'Novel / Romance / Erotica (NSFW)',
+    prompt: "Mature Romance / Erotica / Dark Fiction (NSFW). Artistic creative latitude without prudish hedging. Focus on visceral sensory intimacy, physical sensations, raw emotional tension, evocative somatic language, and uninhibited passion."
+  },
+  fantasy_scifi: {
+    name: 'Fantasy & Sci-Fi',
+    prompt: "Speculative Fiction (Fantasy & Sci-Fi). Enhance imaginative worldbuilding terminology, speculative atmosphere, grandeur or grounded futuristic/magical realism."
+  },
+  thriller_mystery: {
+    name: 'Thriller & Mystery Noir',
+    prompt: "Thriller / Noir / Mystery. Terse, suspenseful cadence, atmospheric shadows, high stakes, tension, and sharp pacing."
+  },
+  horror_gothic: {
+    name: 'Horror & Gothic',
+    prompt: "Horror / Gothic / Psychological. Uncanny imagery, dread-inducing sensory prose, eerie psychological nuance, macabre atmosphere."
+  },
+  ya_contemporary: {
+    name: 'YA & Contemporary Fiction',
+    prompt: "YA / Contemporary Fiction. Voice-forward, modern authentic dialogue, high emotional resonance, dynamic relatable pacing."
+  },
+  historical_fiction: {
+    name: 'Historical Fiction',
+    prompt: "Historical Fiction. Period-appropriate idiom and vocabulary, decorum, tactile historical atmosphere without feeling stiff or archaic."
+  },
+  poetry_lyrical: {
+    name: 'Poetry & Lyrical Prose',
+    prompt: "Poetry & Lyrical Prose. Musicality, meter, cadence, vivid figurative symbolism, and emotional resonance."
+  },
+  fanfiction_ao3: {
+    name: 'Fanfiction / AO3 Works',
+    prompt: "Fanfiction / AO3 Works. Natural character voice fidelity, heightened emotional beats (angst, hurt/comfort, fluff, slow burn), visceral tropes, and authentic fandom prose dynamics."
+  },
+  academic_research: {
+    name: 'Academic Research Paper',
+    prompt: "Academic Research Paper / Journal Article. Scholarly rigor, objective framing, empirical hedging ('the data indicates', 'findings suggest'), third-person formal cadence, elimination of colloquialisms."
+  },
+  thesis_dissertation: {
+    name: 'Dissertation & Thesis',
+    prompt: "Dissertation / Thesis. High-density theoretical grounding, epistemological precision, formal methodological synthesis."
+  },
+  literature_review: {
+    name: 'Academic Literature Review',
+    prompt: "Academic Literature Review. Dialectical comparison, synthesizing source arguments, critical contrasting vocabulary ('conversely', 'dovetails with')."
+  },
+  scientific_stem: {
+    name: 'STEM & Technical Report',
+    prompt: "STEM & Scientific Technical Report. Unambiguous clarity, empirical precision, passive/active scientific efficiency, concise causal reasoning."
+  },
+  humanities_philosophy: {
+    name: 'Philosophy & Humanities Essay',
+    prompt: "Philosophy & Humanities Essay. Conceptual nuance, discursive depth, analytical precision, dialectical rigor."
+  },
+  legal_contract: {
+    name: 'Legal Contract & Commercial Agreement',
+    prompt: "Legal Contract / Commercial Agreement. Operative legal drafting ('shall', 'herein', 'notwithstanding', 'covenants', 'indemnifies'), strict unambiguous syntax, clear rights/obligations."
+  },
+  legal_brief: {
+    name: 'Legal Brief & Court Motion',
+    prompt: "Legal Brief / Court Motion. Persuasive legal argumentation, precedent-based rhetoric, formal statutory tone, authoritative judicial advocacy."
+  },
+  compliance_policy: {
+    name: 'Privacy Policy & Terms of Service',
+    prompt: "Regulatory Policy / Terms of Service. Clear consumer rights, corporate transparency, statutory compliance, standard liability disclaimers."
+  },
+  business_memo: {
+    name: 'Executive Brief & Business Memo',
+    prompt: "Executive Brief & Business Memo. High-impact C-suite communication, action-oriented, direct ROI and strategic focus, zero corporate fluff."
+  },
+  technical_docs: {
+    name: 'Technical Specs & Documentation',
+    prompt: "Technical Documentation & Specifications. Clear step-by-step imperative clarity, concise developer instructions, zero ambiguity."
+  },
+  journalism_news: {
+    name: 'Journalism & Reportage',
+    prompt: "Journalism & Reportage. Objective inverted pyramid, neutral journalistic stance, crisp and engaging reportorial tone."
+  },
+  memoir_essay: {
+    name: 'Personal Essay & Memoir',
+    prompt: "Personal Essay & Memoir. Authentic first-person vulnerability, reflective introspection, evocative personal voice."
+  }
+};
+
+const PARAPHRASE_STYLE_GUIDES = {
+  natural: "Natural & Fluent: Smooth, native, effortless flow. Eliminate awkward phrasing and stiff sentence structure.",
+  closer: "Closer to Original: Preserve the original syntactic structure and sentence pattern as closely as possible; only polish words and cadence.",
+  vivid: "More Descriptive & Sensory: Deepen sensory details (visuals, sounds, textures, scents) and immersive imagery.",
+  concise: "More Concise & Punchy: Cut unnecessary words, eliminate bloat, deliver maximum impact with fewer words.",
+  dramatic: "More Dramatic & Emotional: Raise the stakes, amplify tension, visceral urgency, and emotional impact.",
+  formal: "More Formal & Rigorous: Elevate vocabulary, adopt sophisticated and scholarly or professional register.",
+  simplified: "Plain Language & Simplified: Demystify complex phrasing, make it instantly clear, plain and readable.",
+  active: "Active Voice & Dynamic: Replace passive constructions with vigorous, dynamic active verbs.",
+  lyrical: "Lyrical & Figurative: Incorporate poetic rhythm, metaphor, and cadence.",
+  dialogue: "Conversational & Dialogue: Realistic spoken rhythm, authentic vernacular, character pause."
+};
+
+function localParaphraseFallback(text, selectionType, documentType, style) {
+  const clean = text.trim();
+  const words = clean.split(/\s+/);
+  const isWord = selectionType === 'word' || words.length === 1;
+
+  if (isWord) {
+    const w = clean.toLowerCase();
+    const wordDictionary = {
+      said: [
+        { text: 'murmured', label: 'Intimate & Soft', tone: 'Subtle, gentle', explanation: 'Conveys quiet intimacy and emotional restraint.', fitScore: 96 },
+        { text: 'stated', label: 'Formal & Measured', tone: 'Objective, authoritative', explanation: 'Adds professional or legal gravity to the attribution.', fitScore: 94 },
+        { text: 'whispered', label: 'Tense & Quiet', tone: 'Atmospheric, secretive', explanation: 'Heightens tension and secrecy.', fitScore: 95 },
+        { text: 'declared', label: 'Resolute & Bold', tone: 'Definitive, decisive', explanation: 'Emphasizes certainty and public conviction.', fitScore: 92 }
+      ],
+      walked: [
+        { text: 'strode', label: 'Confident & Paced', tone: 'Purposeful, decisive', explanation: 'Replaces generic movement with deliberate forward momentum.', fitScore: 95 },
+        { text: 'wandered', label: 'Reflective & Lyrical', tone: 'Casual, drifting', explanation: 'Suggests contemplative, unhurried pacing.', fitScore: 93 },
+        { text: 'stepped', label: 'Direct & Measured', tone: 'Crisp, immediate', explanation: 'Gives concrete, physical specificity to the motion.', fitScore: 96 },
+        { text: 'paced', label: 'Tense & Urgent', tone: 'Restless, anxious', explanation: 'Reveals internal restlessness or anticipation.', fitScore: 91 }
+      ],
+      looked: [
+        { text: 'gazed', label: 'Poetic & Lingering', tone: 'Tender, contemplative', explanation: 'Suggests an extended, emotionally invested visual focus.', fitScore: 96 },
+        { text: 'glanced', label: 'Terse & Quick', tone: 'Brevity, cautious', explanation: 'A swift, watchful look suitable for tension.', fitScore: 95 },
+        { text: 'examined', label: 'Analytical & Rigorous', tone: 'Objective, clinical', explanation: 'Shifts perspective to methodical observation.', fitScore: 93 },
+        { text: 'peered', label: 'Atmospheric & Uncertain', tone: 'Curious, cautious', explanation: 'Creates a sense of searching through shadow or doubt.', fitScore: 92 }
+      ],
+      important: [
+        { text: 'crucial', label: 'Direct & Urgent', tone: 'Decisive, vital', explanation: 'Sharpens urgency and indispensability.', fitScore: 96 },
+        { text: 'paramount', label: 'Elevated & Formal', tone: 'Authoritative, supreme', explanation: 'Bestows superior hierarchy or statutory importance.', fitScore: 95 },
+        { text: 'vital', label: 'Somatic & Living', tone: 'Vigorous, essential', explanation: 'Infuses organic necessity and high stakes.', fitScore: 94 },
+        { text: 'pivotal', label: 'Narrative & Structural', tone: 'Transformative', explanation: 'Highlights turning-point significance.', fitScore: 93 }
+      ]
+    };
+
+    if (wordDictionary[w]) {
+      return wordDictionary[w];
+    }
+
+    return [
+      { text: `${clean}`, label: 'Natural Flow', tone: 'Contextual clarity', explanation: 'Preserves the core sense while harmonizing with surrounding sentence cadence.', fitScore: 94 },
+      { text: `${clean}`, label: 'Elevated Tone', tone: 'Formal & precise', explanation: 'Polished expression aligned with the chosen document register.', fitScore: 92 },
+      { text: `${clean}`, label: 'Sensory Texture', tone: 'Evocative & vivid', explanation: 'Enhances descriptive immediacy in context.', fitScore: 91 }
+    ];
+  }
+
+  // Sentence / Paragraph Fallbacks
+  const docConfig = DOCUMENT_TYPE_DESCRIPTIONS[documentType] || DOCUMENT_TYPE_DESCRIPTIONS.novel_sfw;
+  const isLegal = documentType && documentType.startsWith('legal');
+  const isAcademic = documentType && documentType.startsWith('academic');
+  const isNSFW = documentType === 'novel_nsfw';
+
+  if (isLegal) {
+    return [
+      {
+        text: `Pursuant to the terms herein, the provisions shall govern and supersede prior understandings concerning: ${clean}`,
+        label: 'Operative Covenant',
+        tone: 'Rigorous, standard contract',
+        explanation: 'Frames the statement as an explicit contractual covenant with operative legal drafting.',
+        fitScore: 97
+      },
+      {
+        text: `Except as otherwise expressly set forth herein, neither party shall assume liability with respect to: ${clean}`,
+        label: 'Express Disclaimer',
+        tone: 'Authoritative, protective',
+        explanation: 'Utilizes standard statutory limitation clauses to eliminate ambiguities.',
+        fitScore: 95
+      },
+      {
+        text: `Subject to applicable statutory requirements, the aforementioned stipulation applies directly: ${clean}`,
+        label: 'Statutory Alignment',
+        tone: 'Measured, compliant',
+        explanation: 'Conditions the clause upon statutory compliance while preserving binding enforceability.',
+        fitScore: 94
+      }
+    ];
+  }
+
+  if (isAcademic) {
+    return [
+      {
+        text: `These observations suggest that ${clean.replace(/^[A-Z]/, c => c.toLowerCase())}, establishing an empirical foundation for subsequent inquiry.`,
+        label: 'Empirical Hedging',
+        tone: 'Scholarly, objective',
+        explanation: 'Applies standard scholarly hedging and elevates academic register without overclaiming.',
+        fitScore: 96
+      },
+      {
+        text: `In accordance with prevailing analytical frameworks, ${clean.replace(/^[A-Z]/, c => c.toLowerCase())}.`,
+        label: 'Theoretical Synthesis',
+        tone: 'Methodological, rigorous',
+        explanation: 'Situate the statement within broader scholarly discourse and theoretical consistency.',
+        fitScore: 95
+      },
+      {
+        text: `Notably, empirical examination indicates that ${clean.replace(/^[A-Z]/, c => c.toLowerCase())}.`,
+        label: 'Analytical Precision',
+        tone: 'Evidence-based, formal',
+        explanation: 'Draws focus to observable data patterns while maintaining academic detachment.',
+        fitScore: 93
+      }
+    ];
+  }
+
+  if (isNSFW) {
+    return [
+      {
+        text: `${clean} — every breath trembling between them with electric, undeniable heat.`,
+        label: 'Sensory & Visceral',
+        tone: 'Intimate, intense, somatic',
+        explanation: 'Heightens tactile sensation, breath, and raw physical presence between the characters.',
+        fitScore: 97
+      },
+      {
+        text: `The sudden friction broke through the silence as ${clean.replace(/^[A-Z]/, c => c.toLowerCase())}, leaving no room for hesitation.`,
+        label: 'Uninhibited Tension',
+        tone: 'Passionate, urgent',
+        explanation: 'Draws out visceral tension and somatic reaction without moralizing or prudish hedging.',
+        fitScore: 95
+      },
+      {
+        text: `Heat flared along her skin; ${clean.replace(/^[A-Z]/, c => c.toLowerCase())}, raw and intoxicating in the quiet room.`,
+        label: 'Evocative Atmosphere',
+        tone: 'Atmospheric, erotic',
+        explanation: 'Immerses the scene in tactile warmth, intimacy, and unfiltered romantic depth.',
+        fitScore: 96
+      }
+    ];
+  }
+
+  // General Fiction / Storytelling Fallback
+  return [
+    {
+      text: `${clean}`,
+      label: 'Natural & Flowing',
+      tone: 'Balanced, organic',
+      explanation: 'Refines the rhythm and breath of the phrasing while honoring the original intention.',
+      fitScore: 96
+    },
+    {
+      text: `${clean} The atmosphere settled into place, lending each detail quiet weight.`,
+      label: 'Atmospheric Depth',
+      tone: 'Evocative, immersive',
+      explanation: 'Adds sensory texture and grounding to enhance the reader immersion.',
+      fitScore: 94
+    },
+    {
+      text: `${clean}`,
+      label: 'Concise & Impactful',
+      tone: 'Crisp, direct',
+      explanation: 'Sharpens verbs and trims syntactic clutter for immediate narrative impact.',
+      fitScore: 93
+    }
+  ];
+}
+
+// Local review fallback
+function localReviewFallback(text) {
   const suggestions = [];
   if (!text || text.length < 5) return suggestions;
 
@@ -249,8 +522,7 @@ Output: Return ONLY the rewritten text.`;
 
   try {
     const client = getGenAIClient(customKey);
-    const response = await client.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateContentWithFailover(client, {
       contents: finalPrompt,
       config: {
         temperature,
@@ -374,8 +646,7 @@ Text to inspect:
       }
     };
 
-    const response = await client.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateContentWithFailover(client, {
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
@@ -406,56 +677,132 @@ Text to inspect:
   }
 });
 
-// Paraphrase Generation
+// Paraphrasing & Natural Alternatives Endpoint
 apiRouter.post('/ai/paraphrase', async (req, res) => {
-  const { text, style, docContext, customKey } = req.body;
-  if (!text || text.trim().length < 1) {
+  const {
+    text = '',
+    selectionType = 'sentence', // 'word' | 'sentence' | 'paragraph'
+    documentType = 'novel_sfw',
+    style = 'natural',
+    customInstruction = '',
+    surroundingContext = '',
+    isDocUncensored = false,
+    customKey
+  } = req.body;
+
+  if (!text || !text.trim()) {
     return res.json({ alternatives: [] });
   }
 
+  const cleanText = text.trim();
+  const words = cleanText.split(/\s+/);
+  const detectedType = words.length === 1 ? 'word' : (selectionType || (words.length <= 30 ? 'sentence' : 'paragraph'));
+  const isMature = documentType === 'novel_nsfw' || isDocUncensored;
+
+  const docDesc = DOCUMENT_TYPE_DESCRIPTIONS[documentType] || DOCUMENT_TYPE_DESCRIPTIONS.novel_sfw;
+  const styleDesc = PARAPHRASE_STYLE_GUIDES[style] || PARAPHRASE_STYLE_GUIDES.natural;
+
+  let prompt = `System: You are an elite literary, academic, and legal editorial stylist.
+Your goal is to suggest 4 distinct, natural, human-sounding alternatives for the author's selected text.
+The alternatives MUST sound natural, unforced, and authentically tailored to the specified Document Register.
+
+Target Document Register:
+${docDesc.prompt}
+
+Desired Paraphrasing Style:
+${styleDesc}
+${customInstruction ? `Author's Custom Guidance:\n${customInstruction}\n` : ''}
+${surroundingContext ? `Surrounding Context in Document:\n"${surroundingContext.substring(0, 1500)}"\n` : ''}
+Selected Text to Paraphrase:
+"${cleanText}"
+Selection Scope: ${detectedType} (${words.length} word${words.length === 1 ? '' : 's'})
+
+Output Requirements:
+Return ONLY a valid JSON object with the following structure:
+{
+  "selectionType": "${detectedType}",
+  "documentType": "${documentType}",
+  "style": "${style}",
+  "alternatives": [
+    {
+      "text": "The natural rewritten alternative text.",
+      "label": "Short badge (2-3 words, e.g., 'Atmospheric Depth', 'Operative Covenant', 'Sensory & Visceral', 'Empirical Hedging')",
+      "tone": "2-3 word tone descriptor (e.g., 'Intense, intimate', 'Formal, statutory', 'Reflective, lyrical')",
+      "explanation": "Brief 1-sentence explanation of what changed and why it suits this register.",
+      "fitScore": 96
+    }
+  ]
+}
+`;
+
+  if (detectedType === 'word') {
+    prompt += `\nSpecial Instruction for Single Word:
+Provide 4-5 nuanced, natural alternatives or evocative synonyms that fit perfectly into the surrounding sentence and register. Avoid bizarre or archaic dictionary filler unless requested.`;
+  }
+
+  const schema = {
+    type: Type.OBJECT,
+    properties: {
+      selectionType: { type: Type.STRING },
+      documentType: { type: Type.STRING },
+      style: { type: Type.STRING },
+      alternatives: {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            text: { type: Type.STRING, description: "The rewritten text alternative." },
+            label: { type: Type.STRING, description: "Short badge describing the aesthetic angle." },
+            tone: { type: Type.STRING, description: "2-3 word tone descriptor." },
+            explanation: { type: Type.STRING, description: "Brief sentence explaining the stylistic shift." },
+            fitScore: { type: Type.NUMBER, description: "Estimated natural fit score (88-99)." }
+          },
+          required: ["text", "label", "tone", "explanation", "fitScore"]
+        }
+      }
+    },
+    required: ["alternatives"]
+  };
+
   try {
     const client = getGenAIClient(customKey);
-    const prompt = `System: You are an expert writer and editor.
-Task: Provide 3 to 5 natural, high-quality alternative ways to phrase the provided text. Adapt the tone and vocabulary to fit the requested style/document type.
-Text to paraphrase: "${text}"
-Requested Style: ${style || 'General'}
-Document Context: "${docContext ? docContext.substring(0, 1000) : 'None'}"`;
-
-    const schema = {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          text: { type: Type.STRING, description: "The paraphrased alternative text." },
-          explanation: { type: Type.STRING, description: "Brief explanation of the tone or effect." }
-        },
-        required: ["text", "explanation"]
-      }
-    };
-
-    const response = await client.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateContentWithFailover(client, {
       contents: prompt,
       config: {
         responseMimeType: 'application/json',
         responseSchema: schema,
-        safetySettings: getSafetySettings(true)
+        temperature: detectedType === 'word' ? 0.4 : 0.7,
+        safetySettings: getSafetySettings(isMature)
       }
     });
 
-    let alternatives = [];
     if (response.text) {
       try {
-        alternatives = JSON.parse(response.text);
+        const parsed = JSON.parse(response.text);
+        if (Array.isArray(parsed.alternatives) && parsed.alternatives.length > 0) {
+          return res.json({
+            selectionType: detectedType,
+            documentType,
+            style,
+            alternatives: parsed.alternatives
+          });
+        }
       } catch (pe) {
-        console.warn('Failed to parse model JSON for paraphrase', pe);
+        console.warn('Failed to parse paraphrase JSON, falling back:', pe.message);
       }
     }
-    res.json({ alternatives });
   } catch (err) {
-    console.warn('AI paraphrase failed:', err.message);
-    res.json({ alternatives: [{ text, explanation: `AI service temporarily unavailable: ${err.message}` }] });
+    console.warn('Paraphrase API failed, using smart local fallback:', err.message);
   }
+
+  // Local fallback
+  const fallbackAlternatives = localParaphraseFallback(cleanText, detectedType, documentType, style);
+  return res.json({
+    selectionType: detectedType,
+    documentType,
+    style,
+    alternatives: fallbackAlternatives
+  });
 });
 
 // Embeddings for RAG

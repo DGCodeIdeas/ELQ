@@ -170,6 +170,9 @@ export class BlockService {
     return Math.min(100, Math.round((this.wordsWrittenToday() / target) * 100));
   });
 
+  // --- Document Type / Register Signal ---
+  readonly documentType = computed<string>(() => this.currentDoc()?.documentType || 'novel_sfw');
+
   // --- Document Filtering / Unfiltered Processing Signals (Neutral Parity) ---
   readonly isUncensored = computed(() => this.currentDoc()?.isUncensored ?? false);
   readonly isUnfiltered = computed(() => this.isUncensored());
@@ -474,6 +477,19 @@ export class BlockService {
 
   setProcessingMode(mode: 'filtered' | 'unfiltered') {
     this.toggleDocumentCensorship(mode === 'unfiltered');
+  }
+
+  setDocumentType(type: string): void {
+    const isMature = type === 'novel_nsfw';
+    this.currentDoc.update(doc => {
+      if (!doc) return null;
+      return {
+        ...doc,
+        documentType: type,
+        isUncensored: isMature ? true : doc.isUncensored,
+        lastModified: Date.now()
+      };
+    });
   }
 
   setRedactionStyle(style: 'blackout' | 'blackbar' | 'blur' | 'spoiler' | 'asterisks' | 'redact_pill') {

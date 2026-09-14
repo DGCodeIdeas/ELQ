@@ -5,12 +5,17 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { BlockService } from '../../services/block.service';
 import { AiService, Suggestion } from '../../services/ai.service';
 import { AuthService } from '../../services/auth.service';
+import { ParaphraseModalComponent } from '../paraphrase/paraphrase-modal.component';
 
 @Component({
   selector: 'app-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ParaphraseModalComponent],
+  host: {
+    '(window:keydown)': 'onWindowKeyDown($event)',
+    '(document:selectionchange)': 'onDocumentSelectionChange()'
+  },
   templateUrl: './editor.component.html',
   styles: [`
     :host { display: block; width: 100%; height: 100%; }
@@ -41,6 +46,20 @@ export class EditorComponent {
   private inputDebounceTimer: any = null;
   private lastRenderedChapterId: string | null = null;
 
+  // Selection & Paraphrase State
+  selectedText = signal<string>('');
+  selectionWordCount = computed(() => {
+    const t = this.selectedText().trim();
+    return t ? t.split(/\s+/).length : 0;
+  });
+  surroundingContext = signal<string>('');
+  showFloatingPill = signal<boolean>(false);
+  floatingPillTop = signal<number>(0);
+  floatingPillLeft = signal<number>(0);
+  showParaphraseModal = signal<boolean>(false);
+  savedRange: Range | null = null;
+  savedSelectedText: string = '';
+
   // Linguix Review State
   isScanning = signal(false);
   scanResults = signal<Suggestion[]>([]);
@@ -53,17 +72,6 @@ export class EditorComponent {
   redactedSafeContent = computed(() => {
     return this.sanitizer.bypassSecurityTrustHtml(this.blockService.activeChapterRenderedHtml());
   });
-
-  // Paraphrasing State
-  selectionText = signal<string>('');
-  savedSelectionRange = signal<Range | null>(null);
-  showParaphraseMenu = signal(false);
-  floatingMenuPos = signal<{top: number, left: number}>({top: 0, left: 0});
-  isParaphrasing = signal(false);
-  paraphraseStyles = ['Novel (SFW)', 'Novel (NSFW)', 'Academic', 'Law', 'Professional', 'Casual', 'Creative', 'Fantasy', 'Sci-Fi'];
-  selectedParaphraseStyle = signal('Novel (SFW)');
-  paraphraseResults = signal<{text: string, explanation: string}[]>([]);
-  showParaphraseDrawer = signal(false);
 
   constructor() {
     // Sync ACTIVE CHAPTER content from service to editor
@@ -201,95 +209,6 @@ export class EditorComponent {
     }).filter(p => p.length > 0).join('');
   }
   
-  private checkSelection() {
-    setTimeout(() => {
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-        this.showParaphraseMenu.set(false);
-        this.selectionText.set('');
-        this.savedSelectionRange.set(null);
-        return;
-      }
-      
-      const range = selection.getRangeAt(0);
-      
-      // Ensure selection is inside editor
-      if (this.editorRef?.nativeElement && this.editorRef.nativeElement.contains(range.commonAncestorContainer)) {
-        const text = selection.toString().trim();
-        if (text.length > 0) {
-          const rect = range.getBoundingClientRect();
-          this.floatingMenuPos.set({
-            top: rect.top - 40,
-            left: rect.left + (rect.width / 2)
-          });
-          this.selectionText.set(text);
-          this.savedSelectionRange.set(range.cloneRange());
-          this.showParaphraseMenu.set(true);
-        } else {
-          this.showParaphraseMenu.set(false);
-        }
-      } else {
-        this.showParaphraseMenu.set(false);
-      }
-    }, 10);
-  }
-
-  onMouseUp(e: MouseEvent) {
-    this.checkSelection();
-  }
-
-  onKeyUp(e: KeyboardEvent) {
-    this.checkSelection();
-  }
-
-  // --- Paraphrasing ---
-  openParaphraseDrawer() {
-    this.showParaphraseMenu.set(false);
-    this.showParaphraseDrawer.set(true);
-    this.runParaphrase();
-  }
-
-  async runParaphrase() {
-    if (!this.selectionText()) return;
-    this.isParaphrasing.set(true);
-    this.paraphraseResults.set([]);
-    
-    // Pass previous ~200 characters as context
-    let docContext = '';
-    const fullText = this.editorRef?.nativeElement.innerText || '';
-    const selText = this.selectionText();
-    const idx = fullText.indexOf(selText);
-    if (idx > -1) {
-      const start = Math.max(0, idx - 200);
-      docContext = fullText.substring(start, idx + selText.length + 200);
-    }
-    
-    const results = await this.aiService.paraphraseText(
-      selText, 
-      this.selectedParaphraseStyle(), 
-      docContext
-    );
-    this.paraphraseResults.set(results);
-    this.isParaphrasing.set(false);
-  }
-
-  applyParaphrase(alternative: {text: string, explanation: string}) {
-    const range = this.savedSelectionRange();
-    if (range && this.editorRef) {
-      this.editorRef.nativeElement.focus();
-      const selection = window.getSelection();
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      document.execCommand('insertText', false, alternative.text);
-      this.blockService.updateActiveChapterContent(this.editorRef.nativeElement.innerHTML);
-    }
-    this.showParaphraseDrawer.set(false);
-  }
-
-  closeParaphraseDrawer() {
-    this.showParaphraseDrawer.set(false);
-  }
-
   toggleFocusMode() {
     this.isFocusMode.update(v => !v);
     this.focusModeChange.emit(this.isFocusMode());
@@ -369,5 +288,146 @@ export class EditorComponent {
     this.blockService.updateActiveChapterContent(content);
     this.scanResults.set([]);
     this.linguixScore.set(100);
+  }
+
+  // --- Keyboard Shortcuts ---
+  onWindowKeyDown(e: KeyboardEvent) {
+    // Ctrl+Shift+P or Cmd+Shift+P to trigger Paraphrasing
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+      e.preventDefault();
+      this.openParaphraseModal();
+    }
+  }
+
+  // --- Real-time Selection Detection ---
+  onDocumentSelectionChange() {
+    if (this.showParaphraseModal()) return;
+
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !this.editorRef?.nativeElement) {
+      this.showFloatingPill.set(false);
+      this.selectedText.set('');
+      return;
+    }
+
+    const text = sel.toString().trim();
+    if (text.length === 0) {
+      this.showFloatingPill.set(false);
+      this.selectedText.set('');
+      return;
+    }
+
+    if (sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+
+    // Verify selection belongs inside this editor element
+    if (!this.editorRef.nativeElement.contains(range.commonAncestorContainer)) {
+      this.showFloatingPill.set(false);
+      return;
+    }
+
+    this.savedRange = range.cloneRange();
+    this.savedSelectedText = text;
+    this.selectedText.set(text);
+
+    // Extract surrounding context (~150 chars before and after)
+    const fullContent = this.editorRef.nativeElement.innerText || '';
+    const idx = fullContent.indexOf(text);
+    if (idx !== -1) {
+      const start = Math.max(0, idx - 150);
+      const end = Math.min(fullContent.length, idx + text.length + 150);
+      this.surroundingContext.set(fullContent.substring(start, end));
+    } else {
+      this.surroundingContext.set(text);
+    }
+
+    // Position floating pill above selection
+    const rect = range.getBoundingClientRect();
+    if (rect && rect.width > 0) {
+      const top = Math.max(10, rect.top - 44);
+      const left = Math.max(10, rect.left + rect.width / 2);
+      this.floatingPillTop.set(top);
+      this.floatingPillLeft.set(left);
+      this.showFloatingPill.set(true);
+    }
+  }
+
+  openParaphraseModal(fallbackText?: string) {
+    if (fallbackText && !this.selectedText()) {
+      this.selectedText.set(fallbackText);
+      this.savedSelectedText = fallbackText;
+    } else if (!this.selectedText()) {
+      // If nothing highlighted, pick the current line/paragraph from editor
+      const raw = this.editorRef?.nativeElement?.innerText?.trim() || '';
+      if (raw) {
+        const paragraphs = raw.split(/\n{2,}/);
+        const candidate = paragraphs[0]?.trim() || raw;
+        this.selectedText.set(candidate);
+        this.savedSelectedText = candidate;
+        this.surroundingContext.set(raw);
+      }
+    }
+    this.showFloatingPill.set(false);
+    this.showParaphraseModal.set(true);
+  }
+
+  closeParaphraseModal() {
+    this.showParaphraseModal.set(false);
+  }
+
+  applyParaphraseReplacement(newText: string) {
+    this.isTyping = true;
+    let replaced = false;
+
+    if (this.savedRange && this.editorRef?.nativeElement) {
+      try {
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(this.savedRange);
+          replaced = document.execCommand('insertText', false, newText);
+          if (sel.rangeCount > 0) {
+            this.savedRange = sel.getRangeAt(0).cloneRange();
+          }
+        }
+      } catch (err) {
+        console.warn('execCommand failed, falling back to direct replacement', err);
+      }
+    }
+
+    if (!replaced) {
+      const current = this.blockService.activeChapterContent();
+      if (this.savedSelectedText && current.includes(this.savedSelectedText)) {
+        const updated = current.replace(this.savedSelectedText, newText);
+        this.blockService.updateActiveChapterContent(updated);
+        if (this.editorRef?.nativeElement) {
+          this.editorRef.nativeElement.innerHTML = updated;
+        }
+      }
+    } else if (this.editorRef?.nativeElement) {
+      this.blockService.updateActiveChapterContent(this.editorRef.nativeElement.innerHTML);
+    }
+
+    this.savedSelectedText = newText;
+    this.selectedText.set(newText);
+    this.cdr.markForCheck();
+  }
+
+  applyParaphraseInsertBelow(newText: string) {
+    if (this.editorRef?.nativeElement) {
+      const current = this.blockService.activeChapterContent();
+      const insertHtml = `<p class="mt-4 p-3 bg-purple-50/70 border-l-4 border-purple-500 rounded-r-xl text-purple-950 font-serif text-base">${newText}</p>`;
+      
+      let updated = '';
+      if (this.savedSelectedText && current.includes(this.savedSelectedText)) {
+        updated = current.replace(this.savedSelectedText, `${this.savedSelectedText}${insertHtml}`);
+      } else {
+        updated = current + insertHtml;
+      }
+
+      this.blockService.updateActiveChapterContent(updated);
+      this.editorRef.nativeElement.innerHTML = updated;
+      this.cdr.markForCheck();
+    }
   }
 }
