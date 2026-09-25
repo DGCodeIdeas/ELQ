@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AiService } from '../../services/ai.service';
 import { BlockService } from '../../services/block.service';
+import { ModelService } from '../../services/model.service';
 import { 
   DOCUMENT_TYPES, 
   PARAPHRASE_STYLES, 
@@ -59,6 +60,31 @@ interface DiffToken {
           </div>
 
           <div class="flex items-center gap-2">
+            <!-- Active Model Selector Pill -->
+            <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-600 bg-white/90 border border-purple-200/80 px-2.5 py-1 rounded-xl shadow-2xs">
+              <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
+              <span class="text-[10px] uppercase font-bold text-gray-400">Model:</span>
+              <select 
+                [ngModel]="modelService.taskRoles().paraphraseModelId" 
+                (ngModelChange)="onModelChange($event)"
+                class="bg-transparent font-semibold text-gray-800 outline-none cursor-pointer text-xs pr-1"
+                title="Change the AI model used for this paraphrasing session"
+              >
+                <optgroup label="Curated Free Models">
+                  @for (m of modelService.freeModels; track m.id) {
+                    <option [value]="m.id">{{ m.name }} ({{ m.provider }})</option>
+                  }
+                </optgroup>
+                @if (modelService.customModels().length > 0) {
+                  <optgroup label="Custom Endpoints">
+                    @for (cm of modelService.customModels(); track cm.id) {
+                      <option [value]="cm.id">{{ cm.name }}</option>
+                    }
+                  </optgroup>
+                }
+              </select>
+            </div>
+
             @if (hasReplaced()) {
               <button 
                 (click)="onUndo()" 
@@ -160,6 +186,58 @@ interface DiffToken {
                 {{ selectedStyleDef()?.description }}
               </p>
             </div>
+          </div>
+
+          <!-- Surrounding Context Awareness Banner -->
+          <div class="bg-gradient-to-r from-indigo-50/80 via-purple-50/50 to-white border border-indigo-100/90 rounded-xl p-3 space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="relative flex h-2 w-2">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                  <span>Surrounding Context Integration:</span>
+                  <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-emerald-200">
+                    Active & Harmonized
+                  </span>
+                </span>
+                @if (hasSurroundingContext()) {
+                  <span class="hidden sm:inline text-[11px] text-gray-400">
+                    ({{ (contextBefore.length + contextAfter.length) || surroundingContext.length }} chars passage context)
+                  </span>
+                }
+              </div>
+
+              <button 
+                (click)="showContextViewer.set(!showContextViewer())"
+                class="text-xs font-medium text-indigo-700 hover:text-indigo-900 flex items-center gap-1 cursor-pointer transition-colors"
+                title="Inspect surrounding document context captured for this rewrite"
+              >
+                <span>{{ showContextViewer() ? 'Hide Context Inspector' : 'Inspect Surrounding Context' }}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.rotate-180]="showContextViewer()"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </div>
+
+            <p class="text-[11px] text-gray-500 leading-relaxed">
+              Every alternative strictly conforms to surrounding verb tenses, narrative voice (1st/3rd person), dialogue cadence, and preceding/following sentence flow.
+            </p>
+
+            @if (showContextViewer()) {
+              <div class="mt-2 pt-2 border-t border-indigo-100/80 text-xs text-gray-700 font-serif leading-relaxed bg-white/90 p-3 rounded-lg border border-indigo-100 shadow-2xs">
+                <div class="text-[10px] font-sans uppercase font-bold text-indigo-900/60 mb-1.5 tracking-wider flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                  <span>Active Document Passage Snapshot:</span>
+                </div>
+                <div class="p-2 bg-gray-50/70 rounded border border-gray-100">
+                  <span class="text-gray-400 italic">{{ contextBefore ? '…' + contextBefore.slice(-250) : '(Start of section)' }} </span>
+                  <span class="bg-purple-100 text-purple-900 font-semibold px-1.5 py-0.5 rounded border border-purple-300 mx-1 inline shadow-2xs">
+                    {{ editableText() }}
+                  </span>
+                  <span class="text-gray-400 italic"> {{ contextAfter ? contextAfter.slice(0, 250) + '…' : '(End of section)' }}</span>
+                </div>
+              </div>
+            }
           </div>
 
           <!-- Original Selected Text Box & Custom Guidance -->
@@ -332,9 +410,37 @@ interface DiffToken {
                       </p>
                     }
 
+                    <!-- Live Passage Flow Preview -->
+                    @if (previewContextForAlt() === alt.text) {
+                      <div class="p-3 bg-purple-50/80 border border-purple-200/90 rounded-xl text-xs sm:text-sm font-serif leading-relaxed text-gray-800 animate-in fade-in duration-150">
+                        <div class="text-[10px] font-sans uppercase font-bold text-purple-800 mb-1 flex items-center gap-1.5 tracking-wider">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          <span>Full Passage Flow Preview:</span>
+                        </div>
+                        <span class="text-gray-500">{{ getContextExcerptBefore() }}</span>
+                        <span class="bg-purple-200/90 text-purple-950 font-bold px-1.5 py-0.5 rounded shadow-2xs mx-1 inline border border-purple-300">
+                          {{ alt.text }}
+                        </span>
+                        <span class="text-gray-500">{{ getContextExcerptAfter() }}</span>
+                      </div>
+                    }
+
                     <!-- Actions -->
                     <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-100">
                       <div class="flex items-center gap-2">
+                        <!-- Flow in Context Preview Toggle -->
+                        <button 
+                          (click)="toggleContextPreview(alt.text)"
+                          [class]="'px-2.5 py-1 text-xs rounded-lg border transition-colors flex items-center gap-1.5 cursor-pointer ' + 
+                            (previewContextForAlt() === alt.text 
+                              ? 'bg-purple-100 text-purple-900 border-purple-300 font-semibold' 
+                              : 'text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-100 border-gray-200')"
+                          title="Preview how this alternative reads inside your full surrounding passage"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                          <span>{{ previewContextForAlt() === alt.text ? 'Hide Flow' : 'Flow in Context' }}</span>
+                        </button>
+
                         <!-- Copy button -->
                         <button 
                           (click)="copyAlternative(alt.text)"
@@ -403,9 +509,12 @@ interface DiffToken {
 export class ParaphraseModalComponent implements OnInit, OnChanges {
   aiService = inject(AiService);
   blockService = inject(BlockService);
+  modelService = inject(ModelService);
 
   @Input() selectedText = '';
   @Input() surroundingContext = '';
+  @Input() contextBefore = '';
+  @Input() contextAfter = '';
   @Input() initialDocumentType?: string;
   @Input() initialStyle = 'natural';
 
@@ -423,6 +532,8 @@ export class ParaphraseModalComponent implements OnInit, OnChanges {
   customInstruction = signal<string>('');
   showCustomGuidance = signal<boolean>(false);
   showDiffMode = signal<boolean>(false);
+  showContextViewer = signal<boolean>(false);
+  previewContextForAlt = signal<string | null>(null);
 
   isLoading = signal<boolean>(false);
   alternatives = signal<ParaphraseAlternative[]>([]);
@@ -454,6 +565,10 @@ export class ParaphraseModalComponent implements OnInit, OnChanges {
     if (count <= 1) return 'Word';
     if (count <= 32) return 'Sentence';
     return 'Paragraph';
+  });
+
+  hasSurroundingContext = computed(() => {
+    return !!(this.contextBefore || this.contextAfter || (this.surroundingContext && this.surroundingContext !== this.selectedText));
   });
 
   ngOnInit() {
@@ -497,6 +612,13 @@ export class ParaphraseModalComponent implements OnInit, OnChanges {
     this.generateAlternatives();
   }
 
+  onModelChange(newModelId: string) {
+    this.modelService.setTaskRole('paraphraseModelId', newModelId);
+    if (this.editableText().trim()) {
+      this.generateAlternatives();
+    }
+  }
+
   async generateAlternatives() {
     const text = this.editableText().trim();
     if (!text) return;
@@ -513,6 +635,8 @@ export class ParaphraseModalComponent implements OnInit, OnChanges {
         style: this.currentStyle(),
         customInstruction: this.customInstruction(),
         surroundingContext: this.surroundingContext,
+        contextBefore: this.contextBefore,
+        contextAfter: this.contextAfter,
         isDocUncensored: this.blockService.isUncensored() || this.isMatureRegister()
       });
 
@@ -521,6 +645,28 @@ export class ParaphraseModalComponent implements OnInit, OnChanges {
       console.error('Failed to generate alternatives:', err);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  getContextExcerptBefore(): string {
+    const raw = this.contextBefore || '';
+    if (!raw) return '';
+    const slice = raw.slice(-120);
+    return raw.length > 120 ? `…${slice}` : slice;
+  }
+
+  getContextExcerptAfter(): string {
+    const raw = this.contextAfter || '';
+    if (!raw) return '';
+    const slice = raw.slice(0, 120);
+    return raw.length > 120 ? `${slice}…` : slice;
+  }
+
+  toggleContextPreview(altText: string) {
+    if (this.previewContextForAlt() === altText) {
+      this.previewContextForAlt.set(null);
+    } else {
+      this.previewContextForAlt.set(altText);
     }
   }
 

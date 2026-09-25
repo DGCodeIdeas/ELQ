@@ -32,6 +32,8 @@ export interface ParaphraseRequest {
   style?: string;
   customInstruction?: string;
   surroundingContext?: string;
+  contextBefore?: string;
+  contextAfter?: string;
   isDocUncensored?: boolean;
   customKey?: string;
 }

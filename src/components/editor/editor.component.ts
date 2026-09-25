@@ -53,6 +53,8 @@ export class EditorComponent {
     return t ? t.split(/\s+/).length : 0;
   });
   surroundingContext = signal<string>('');
+  contextBefore = signal<string>('');
+  contextAfter = signal<string>('');
   showFloatingPill = signal<boolean>(false);
   floatingPillTop = signal<number>(0);
   floatingPillLeft = signal<number>(0);
@@ -330,13 +332,36 @@ export class EditorComponent {
     this.savedSelectedText = text;
     this.selectedText.set(text);
 
-    // Extract surrounding context (~150 chars before and after)
-    const fullContent = this.editorRef.nativeElement.innerText || '';
-    const idx = fullContent.indexOf(text);
-    if (idx !== -1) {
-      const start = Math.max(0, idx - 150);
-      const end = Math.min(fullContent.length, idx + text.length + 150);
-      this.surroundingContext.set(fullContent.substring(start, end));
+    // Accurately extract surrounding context (up to 800 chars before and 800 chars after)
+    let before = '';
+    let after = '';
+
+    try {
+      const preRange = document.createRange();
+      preRange.selectNodeContents(this.editorRef.nativeElement);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      const fullPreText = preRange.toString();
+      before = fullPreText.slice(-800);
+
+      const postRange = document.createRange();
+      postRange.selectNodeContents(this.editorRef.nativeElement);
+      postRange.setStart(range.endContainer, range.endOffset);
+      const fullPostText = postRange.toString();
+      after = fullPostText.slice(0, 800);
+    } catch {
+      const fullContent = this.editorRef.nativeElement.innerText || '';
+      const idx = fullContent.indexOf(text);
+      if (idx !== -1) {
+        before = fullContent.substring(Math.max(0, idx - 500), idx);
+        after = fullContent.substring(idx + text.length, Math.min(fullContent.length, idx + text.length + 500));
+      }
+    }
+
+    this.contextBefore.set(before);
+    this.contextAfter.set(after);
+
+    if (before || after) {
+      this.surroundingContext.set(`${before} >>> [TARGET: "${text}"] <<< ${after}`);
     } else {
       this.surroundingContext.set(text);
     }
@@ -356,6 +381,15 @@ export class EditorComponent {
     if (fallbackText && !this.selectedText()) {
       this.selectedText.set(fallbackText);
       this.savedSelectedText = fallbackText;
+      const raw = this.editorRef?.nativeElement?.innerText || '';
+      const idx = raw.indexOf(fallbackText);
+      if (idx !== -1) {
+        const before = raw.substring(Math.max(0, idx - 600), idx);
+        const after = raw.substring(idx + fallbackText.length, Math.min(raw.length, idx + fallbackText.length + 600));
+        this.contextBefore.set(before);
+        this.contextAfter.set(after);
+        this.surroundingContext.set(`${before} >>> [TARGET: "${fallbackText}"] <<< ${after}`);
+      }
     } else if (!this.selectedText()) {
       // If nothing highlighted, pick the current line/paragraph from editor
       const raw = this.editorRef?.nativeElement?.innerText?.trim() || '';
@@ -364,7 +398,10 @@ export class EditorComponent {
         const candidate = paragraphs[0]?.trim() || raw;
         this.selectedText.set(candidate);
         this.savedSelectedText = candidate;
-        this.surroundingContext.set(raw);
+        const remainder = raw.slice(candidate.length);
+        this.contextBefore.set('');
+        this.contextAfter.set(remainder.slice(0, 800));
+        this.surroundingContext.set(`>>> [TARGET: "${candidate}"] <<< ${remainder.slice(0, 800)}`);
       }
     }
     this.showFloatingPill.set(false);

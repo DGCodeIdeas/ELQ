@@ -38,7 +38,7 @@ function getSafetySettings(isUncensored = false) {
 
 // Fallback rule-based linguistic reviewer
 async function generateContentWithFailover(client, options) {
-  const models = ['gemini-3.8-flash', 'gemini-2.5-flash', 'gemini-3.1-flash-lite'];
+  const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-flash-8b'];
   let lastErr = null;
   for (const model of models) {
     try {
@@ -47,11 +47,252 @@ async function generateContentWithFailover(client, options) {
         model
       });
     } catch (err) {
-      console.warn(`Model ${model} failed with ${err.status || err.message}, trying next candidate...`);
+      if (err.status !== 404) {
+        console.warn(`Model ${model} failed with ${err.status || err.message}, trying next candidate...`);
+      }
       lastErr = err;
     }
   }
   throw lastErr;
+}
+
+// Unified Multi-Provider Execution Engine
+async function executeUnifiedModelPrompt({
+  modelId = 'gemini-2.5-flash',
+  prompt,
+  systemInstruction = '',
+  temperature = 0.7,
+  maxTokens = 2048,
+  isUncensored = false,
+  customKey = '',
+  customModel = null
+}) {
+  const normalizedId = (modelId || '').toLowerCase();
+
+  // 1. Custom / Local Endpoint (Ollama, LM Studio, vLLM, private HTTP)
+  if (customModel && customModel.endpointUrl) {
+    try {
+      let endpoint = customModel.endpointUrl.trim();
+      if (customModel.providerType === 'ollama') {
+        if (!endpoint.includes('/v1') && !endpoint.includes('/api')) {
+          endpoint = endpoint.replace(/\/+$/, '') + '/v1/chat/completions';
+        }
+      } else if (!endpoint.endsWith('/chat/completions') && !endpoint.includes('/api/')) {
+        endpoint = endpoint.replace(/\/+$/, '') + '/chat/completions';
+      }
+
+      const headers = { 'Content-Type': 'application/json' };
+      if (customModel.apiKey || customKey) {
+        headers['Authorization'] = `Bearer ${customModel.apiKey || customKey}`;
+      }
+
+      const messages = [];
+      if (systemInstruction || customModel.systemPrompt) {
+        messages.push({ role: 'system', content: customModel.systemPrompt || systemInstruction });
+      }
+      messages.push({ role: 'user', content: prompt });
+
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: customModel.name || 'default',
+          messages,
+          temperature: customModel.temperature || temperature,
+          max_tokens: maxTokens
+        }),
+        signal: AbortSignal.timeout(10000)
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const text = data.choices?.[0]?.message?.content || data.response || data.text || '';
+        if (text) return { text, providerUsed: 'Custom Node' };
+      }
+      throw new Error(`Custom endpoint returned HTTP ${resp.status}. Please check your URL and API key.`);
+    } catch (e) {
+      if (e.message.includes('fetch failed') && customModel.endpointUrl.includes('localhost')) {
+        throw new Error(`Cannot reach localhost from the cloud server. For local models like Ollama, you must expose them via a tunneling service (like ngrok) or use a public IP.`);
+      }
+      throw new Error(`Custom endpoint error: ${e.message}`);
+    }
+  }
+
+  // 2. Pollinations Instant Free Public Inference (Zero Key)
+  if (normalizedId.startsWith('pollinations-')) {
+    try {
+      let pollinationsModel = 'openai-fast';
+      if (normalizedId.includes('deepseek')) pollinationsModel = 'deepseek';
+      else if (normalizedId.includes('mistral')) pollinationsModel = 'mistral';
+      else if (normalizedId.includes('qwen')) pollinationsModel = 'qwen';
+      else if (normalizedId.includes('llama')) pollinationsModel = 'llama';
+
+      const messages = [];
+      if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+      messages.push({ role: 'user', content: prompt });
+
+      const resp = await fetch('https://text.pollinations.ai/openai/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: pollinationsModel,
+          messages,
+          temperature
+        }),
+        signal: AbortSignal.timeout(9000)
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        const text = data.choices?.[0]?.message?.content || '';
+        if (text) return { text, providerUsed: 'Pollinations AI' };
+      }
+    } catch (e) {
+      console.warn('Pollinations inference error:', e.message);
+    }
+  }
+
+  // 3. Groq Cloud Free Tier (Ultra-Fast 300-800 tok/s)
+  if (normalizedId.includes('groq') || ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'].includes(normalizedId)) {
+    const groqKey = customKey || process.env.GROQ_API_KEY;
+    if (groqKey) {
+      try {
+        let groqModel = normalizedId;
+        if (!['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'].includes(groqModel)) {
+          groqModel = 'llama-3.3-70b-versatile';
+        }
+
+        const messages = [];
+        if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+        messages.push({ role: 'user', content: prompt });
+
+        const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${groqKey}`
+          },
+          body: JSON.stringify({
+            model: groqModel,
+            messages,
+            temperature,
+            max_tokens: maxTokens
+          }),
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          const text = data.choices?.[0]?.message?.content || '';
+          if (text) return { text, providerUsed: 'Groq Cloud' };
+        }
+      } catch (e) {
+        console.warn('Groq execution failed, falling back to Gemini:', e.message);
+      }
+    }
+  }
+
+  // 4. OpenRouter Free Tier (:free Community Models)
+  if (normalizedId.includes('openrouter') || normalizedId.includes(':free')) {
+    const orKey = customKey || process.env.OPENROUTER_API_KEY;
+    if (orKey) {
+      try {
+        let orModel = modelId;
+        if (!orModel.includes('/')) {
+          orModel = 'deepseek/deepseek-chat:free';
+        }
+
+        const messages = [];
+        if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+        messages.push({ role: 'user', content: prompt });
+
+        const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${orKey}`,
+            'HTTP-Referer': 'https://eloqui.studio',
+            'X-Title': 'Eloqui AI Studio'
+          },
+          body: JSON.stringify({
+            model: orModel,
+            messages,
+            temperature,
+            max_tokens: maxTokens
+          }),
+          signal: AbortSignal.timeout(12000)
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          const text = data.choices?.[0]?.message?.content || '';
+          if (text) return { text, providerUsed: 'OpenRouter Free' };
+        }
+      } catch (e) {
+        console.warn('OpenRouter execution failed, falling back:', e.message);
+      }
+    }
+  }
+
+  // 5. Cerebras Wafer-Scale Engines (1,800+ tok/s)
+  if (normalizedId.includes('cerebras')) {
+    const cerebrasKey = customKey || process.env.CEREBRAS_API_KEY;
+    if (cerebrasKey) {
+      try {
+        const cModel = normalizedId.includes('70b') ? 'llama3.3-70b' : 'llama3.1-8b';
+        const messages = [];
+        if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+        messages.push({ role: 'user', content: prompt });
+
+        const resp = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${cerebrasKey}`
+          },
+          body: JSON.stringify({
+            model: cModel,
+            messages,
+            temperature,
+            max_tokens: maxTokens
+          }),
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (resp.ok) {
+          const data = await resp.json();
+          const text = data.choices?.[0]?.message?.content || '';
+          if (text) return { text, providerUsed: 'Cerebras Cloud' };
+        }
+      } catch (e) {
+        console.warn('Cerebras execution failed:', e.message);
+      }
+    }
+  }
+
+  // 6. Resilient Anchor: Google AI Studio (Gemini 3.8 / 2.5 / 3.1)
+  const client = getGenAIClient(customKey);
+  const geminiModel = normalizedId.startsWith('gemini') ? modelId : 'gemini-2.5-flash';
+  const contents = prompt;
+  const config = {
+    temperature,
+    safetySettings: getSafetySettings(isUncensored)
+  };
+  if (systemInstruction) {
+    config.systemInstruction = systemInstruction;
+  }
+
+  try {
+    const response = await client.models.generateContent({
+      model: geminiModel,
+      contents,
+      config
+    });
+    return { text: response.text || '', providerUsed: 'Google AI Studio' };
+  } catch {
+    const fallbackRes = await generateContentWithFailover(client, { contents, config });
+    return { text: fallbackRes.text || '', providerUsed: 'Google AI Studio' };
+  }
 }
 
 const DOCUMENT_TYPE_DESCRIPTIONS = {
@@ -433,13 +674,49 @@ apiRouter.get('/health', (req, res) => {
   res.json({ status: 'ok', hasGeminiKey: !!process.env.GEMINI_API_KEY });
 });
 
+// Model Testing & Latency Probe Endpoint
+apiRouter.post('/ai/test-model', async (req, res) => {
+  const { modelId = 'gemini-2.5-flash', prompt = 'Rephrase for natural flow: The cold wind blew through the quiet empty street.', customModel, customKey } = req.body;
+  const start = Date.now();
+
+  try {
+    const result = await executeUnifiedModelPrompt({
+      modelId,
+      prompt,
+      systemInstruction: 'You are a master literary editor. Keep your response short, punchy, and natural.',
+      temperature: 0.6,
+      maxTokens: 120,
+      customKey,
+      customModel
+    });
+
+    const latencyMs = Math.max(1, Date.now() - start);
+    return res.json({
+      ok: true,
+      modelId,
+      latencyMs,
+      snippet: (result.text || '').trim(),
+      provider: result.providerUsed || 'Cloud AI Engine'
+    });
+  } catch (err) {
+    const latencyMs = Math.max(1, Date.now() - start);
+    console.warn(`Test probe for model ${modelId} failed:`, err.message);
+    return res.status(502).json({
+      ok: false,
+      error: err.message || 'Model test probe failed',
+      latencyMs
+    });
+  }
+});
+
 // Text Generation / Transformations
 apiRouter.post('/ai/generate', async (req, res) => {
-  const { prompt, context, mode = 'fast', isDocUncensored = false, customKey } = req.body;
+  const { prompt, context, mode = 'fast', isDocUncensored = false, customKey, modelId = 'gemini-2.5-flash', customModel } = req.body;
   const isUncensoredEffective = isDocUncensored || mode === 'uncensored' || mode === 'unfiltered';
 
   let temperature = isUncensoredEffective ? 0.85 : 0.7;
   let finalPrompt = prompt;
+  let systemInstruction = '';
 
   switch (mode) {
     case 'dictionary':
@@ -459,57 +736,44 @@ Output Format:
 
     case 'uncensored':
     case 'unfiltered':
-      finalPrompt = `System: You are an objective, neutral writing collaborator operating in Unfiltered Mode. Your mandate is to assist the user directly and faithfully with their writing without bias, editorializing, lecturing, preaching, or moralizing. Treat all creative, literary, speculative, historical, and philosophical themes with serious craft, impartial tone, and respect for the author's vision.
-Task: ${prompt}
-Context: ${context || ''}`;
+      systemInstruction = `You are an objective, neutral writing collaborator operating in Unfiltered Mode. Your mandate is to assist the user directly and faithfully with their writing without bias, editorializing, lecturing, preaching, or moralizing. Treat all creative, literary, speculative, historical, and philosophical themes with serious craft, impartial tone, and respect for the author's vision.`;
+      finalPrompt = `Task: ${prompt}\nContext: ${context || ''}`;
       temperature = 0.85;
       break;
 
     case 'shorten':
-      finalPrompt = `System: You are a ruthless editor.
-Task: Rewrite the following text to be concise. Remove fluff, redundancy, and unnecessary words without losing core meaning.
-Input Text: "${context || prompt}"
-Output: Return ONLY the rewritten text.`;
+      systemInstruction = `You are a ruthless editor. Rewrite the text to be concise. Remove fluff, redundancy, and unnecessary words without losing core meaning. Return ONLY the rewritten text.`;
+      finalPrompt = `Input Text: "${context || prompt}"`;
       temperature = 0.3;
       break;
 
     case 'expand':
-      finalPrompt = `System: You are a creative writer.
-Task: Expand upon the following text. Add relevant sensory details, clarify concepts, and improve flow.
-Input Text: "${context || prompt}"
-Output: Return ONLY the rewritten text.`;
+      systemInstruction = `You are a creative writer. Expand upon the following text. Add relevant sensory details, clarify concepts, and improve flow. Return ONLY the rewritten text.`;
+      finalPrompt = `Input Text: "${context || prompt}"`;
       temperature = 0.7;
       break;
 
     case 'formal':
-      finalPrompt = `System: You are a corporate communications expert.
-Task: Rewrite the following text to be professional, authoritative, and business-appropriate.
-Input Text: "${context || prompt}"
-Output: Return ONLY the rewritten text.`;
+      systemInstruction = `You are a corporate communications expert. Rewrite the text to be professional, authoritative, and business-appropriate. Return ONLY the rewritten text.`;
+      finalPrompt = `Input Text: "${context || prompt}"`;
       temperature = 0.3;
       break;
 
     case 'casual':
-      finalPrompt = `System: You are a friendly blogger.
-Task: Rewrite the following text to be conversational, engaging, and human.
-Input Text: "${context || prompt}"
-Output: Return ONLY the rewritten text.`;
+      systemInstruction = `You are a friendly blogger. Rewrite the following text to be conversational, engaging, and human. Return ONLY the rewritten text.`;
+      finalPrompt = `Input Text: "${context || prompt}"`;
       temperature = 0.8;
       break;
 
     case 'simplify':
-      finalPrompt = `System: You are a teacher for young students.
-Task: Rewrite the following text to be simple and clear. Use plain language (5th-grade reading level).
-Input Text: "${context || prompt}"
-Output: Return ONLY the rewritten text.`;
+      systemInstruction = `You are a teacher for young students. Rewrite the text to be simple and clear. Use plain language (5th-grade reading level). Return ONLY the rewritten text.`;
+      finalPrompt = `Input Text: "${context || prompt}"`;
       temperature = 0.3;
       break;
 
     case 'active_voice':
-      finalPrompt = `System: You are a strict grammarian.
-Task: Rewrite the following text to use Active Voice instead of passive voice.
-Input Text: "${context || prompt}"
-Output: Return ONLY the rewritten text.`;
+      systemInstruction = `You are a strict grammarian. Rewrite the following text to use Active Voice instead of passive voice. Return ONLY the rewritten text.`;
+      finalPrompt = `Input Text: "${context || prompt}"`;
       temperature = 0.3;
       break;
 
@@ -521,16 +785,17 @@ Output: Return ONLY the rewritten text.`;
   }
 
   try {
-    const client = getGenAIClient(customKey);
-    const response = await generateContentWithFailover(client, {
-      contents: finalPrompt,
-      config: {
-        temperature,
-        safetySettings: getSafetySettings(isUncensoredEffective)
-      }
+    const result = await executeUnifiedModelPrompt({
+      modelId,
+      prompt: finalPrompt,
+      systemInstruction,
+      temperature,
+      isUncensored: isUncensoredEffective,
+      customKey,
+      customModel
     });
 
-    return res.json({ text: response.text || '' });
+    return res.json({ text: result.text || '', provider: result.providerUsed });
   } catch (err) {
     console.warn('Primary generation failed, using local fallback:', err.message);
     const fallbackText = localTransformFallback(mode, context || prompt);
@@ -540,7 +805,7 @@ Output: Return ONLY the rewritten text.`;
 
 // Chat with streaming support
 apiRouter.post('/ai/chat', async (req, res) => {
-  const { history = [], message, docContext, mode = 'chapter', isUncensored = false, customKey, stream = true } = req.body;
+  const { history = [], message, docContext, mode = 'chapter', isUncensored = false, customKey, modelId = 'gemini-2.5-flash', customModel, stream = true } = req.body;
 
   let systemInstruction = 'You are Eloqui, a world-class literary editor and writing companion. Help the author draft, refine, critique, and structure their manuscript with elegance, precision, and respect for their creative voice.';
   if (isUncensored || mode === 'uncensored') {
@@ -567,15 +832,18 @@ apiRouter.post('/ai/chat', async (req, res) => {
     parts: [{ text: promptWithContext }]
   });
 
-  if (stream) {
+  const isGemini = !modelId || modelId.toLowerCase().startsWith('gemini');
+
+  if (stream && isGemini) {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
 
     try {
       const client = getGenAIClient(customKey);
+      const geminiModel = modelId && modelId.startsWith('gemini') ? modelId : 'gemini-2.5-flash';
       const responseStream = await client.models.generateContentStream({
-        model: 'gemini-3.8-flash',
+        model: geminiModel,
         contents,
         config: {
           systemInstruction,
@@ -597,83 +865,156 @@ apiRouter.post('/ai/chat', async (req, res) => {
 
     res.write('data: [DONE]\n\n');
     res.end();
+  } else if (stream && !isGemini) {
+    // Non-Gemini model streaming via SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    try {
+      const result = await executeUnifiedModelPrompt({
+        modelId,
+        prompt: promptWithContext,
+        systemInstruction,
+        temperature: isUncensored ? 0.85 : 0.7,
+        isUncensored,
+        customKey,
+        customModel
+      });
+
+      const fullText = result.text || '';
+      // Stream in natural word chunks for realistic pacing
+      const words = fullText.split(/(\s+)/);
+      for (let i = 0; i < words.length; i += 2) {
+        const chunk = (words[i] || '') + (words[i + 1] || '');
+        if (chunk) {
+          res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
+        }
+      }
+    } catch (err) {
+      console.warn('Alternative model chat failed:', err.message);
+      res.write(`data: ${JSON.stringify({ text: `\n\n*(Notice: Model request encountered an issue: ${err.message}. Check your provider settings in AI Model Hub.)*` })}\n\n`);
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
   } else {
     try {
-      const client = getGenAIClient(customKey);
-      const response = await client.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents,
-        config: {
-          systemInstruction,
-          temperature: isUncensored ? 0.85 : 0.7,
-          safetySettings: getSafetySettings(isUncensored)
-        }
+      const result = await executeUnifiedModelPrompt({
+        modelId,
+        prompt: promptWithContext,
+        systemInstruction,
+        temperature: isUncensored ? 0.85 : 0.7,
+        isUncensored,
+        customKey,
+        customModel
       });
-      res.json({ text: response.text || '' });
+      res.json({ text: result.text || '' });
     } catch (err) {
-      res.json({ text: `I am currently experiencing a temporary rate limit. Please try again shortly, or provide a personal API key in Key Management.` });
+      res.json({ text: `I am currently experiencing a temporary rate limit. Please try again shortly, or switch models in the AI Model Hub.` });
     }
   }
 });
 
 // Linguix Quality / Grammar Review
 apiRouter.post('/ai/review', async (req, res) => {
-  const { text, customKey } = req.body;
+  const { text, customKey, modelId = 'gemini-2.5-flash', customModel } = req.body;
   if (!text || text.trim().length < 5) {
     return res.json({ suggestions: [], score: 100 });
   }
 
-  try {
-    const client = getGenAIClient(customKey);
-    const prompt = `System: You are Linguix, a world-class proofreader and grammar editor.
+  const prompt = `System: You are Linguix, a world-class proofreader and grammar editor.
 Analyze the text below. Identify spelling errors, grammatical mistakes, awkward phrasing, wordy sentences, or passive constructions.
-Return an array of JSON objects matching the schema.
+Return an array of JSON objects with keys: "original", "suggestion", "type" (Spelling, Grammar, Clarity, Style, or Tone), and "explanation".
+Return ONLY valid JSON array with no extra markdown formatting or conversational text.
 
 Text to inspect:
 "${text.substring(0, 8000)}"`;
 
-    const schema = {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-          original: { type: Type.STRING, description: "Exact substring that has an issue." },
-          suggestion: { type: Type.STRING, description: "Direct replacement suggestion." },
-          type: { type: Type.STRING, description: "Spelling, Grammar, Clarity, Style, or Tone." },
-          explanation: { type: Type.STRING, description: "Brief explanation." }
-        },
-        required: ["original", "suggestion", "type", "explanation"]
-      }
-    };
+  const isGemini = !modelId || modelId.toLowerCase().startsWith('gemini');
 
-    const response = await generateContentWithFailover(client, {
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: schema,
-        safetySettings: getSafetySettings(true)
-      }
-    });
+  if (isGemini) {
+    try {
+      const client = getGenAIClient(customKey);
+      const geminiModel = modelId && modelId.startsWith('gemini') ? modelId : 'gemini-2.5-flash';
+      const schema = {
+        type: Type.ARRAY,
+        items: {
+          type: Type.OBJECT,
+          properties: {
+            original: { type: Type.STRING, description: "Exact substring that has an issue." },
+            suggestion: { type: Type.STRING, description: "Direct replacement suggestion." },
+            type: { type: Type.STRING, description: "Spelling, Grammar, Clarity, Style, or Tone." },
+            explanation: { type: Type.STRING, description: "Brief explanation." }
+          },
+          required: ["original", "suggestion", "type", "explanation"]
+        }
+      };
 
-    let suggestions = [];
-    if (response.text) {
-      try {
-        suggestions = JSON.parse(response.text);
-      } catch (pe) {
-        console.warn('Failed to parse model JSON, falling back to local review', pe);
+      const response = await client.models.generateContent({
+        model: geminiModel,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          safetySettings: getSafetySettings(true)
+        }
+      }).catch(() => generateContentWithFailover(client, {
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          safetySettings: getSafetySettings(true)
+        }
+      }));
+
+      let suggestions = [];
+      if (response.text) {
+        try {
+          suggestions = JSON.parse(response.text);
+        } catch {
+          suggestions = localLinguisticReview(text);
+        }
+      } else {
         suggestions = localLinguisticReview(text);
       }
-    } else {
-      suggestions = localLinguisticReview(text);
-    }
 
-    const score = Math.max(45, Math.min(100, Math.round(100 - suggestions.length * 7)));
-    res.json({ suggestions, score });
-  } catch (err) {
-    console.warn('AI review failed, falling back to rule-based analysis:', err.message);
-    const suggestions = localLinguisticReview(text);
-    const score = Math.max(60, Math.min(100, Math.round(100 - suggestions.length * 8)));
-    res.json({ suggestions, score });
+      const score = Math.max(45, Math.min(100, Math.round(100 - suggestions.length * 7)));
+      return res.json({ suggestions, score, modelUsed: geminiModel });
+    } catch (err) {
+      console.warn('AI review failed, falling back to rule-based analysis:', err.message);
+      const suggestions = localLinguisticReview(text);
+      const score = Math.max(60, Math.min(100, Math.round(100 - suggestions.length * 8)));
+      return res.json({ suggestions, score, modelUsed: 'RuleEngine' });
+    }
+  } else {
+    // Non-Gemini model execution
+    try {
+      const result = await executeUnifiedModelPrompt({
+        modelId,
+        prompt,
+        temperature: 0.2,
+        customKey,
+        customModel
+      });
+
+      let suggestions = [];
+      if (result.text) {
+        const jsonMatch = result.text.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          suggestions = JSON.parse(jsonMatch[0]);
+        }
+      }
+      if (!Array.isArray(suggestions) || suggestions.length === 0) {
+        suggestions = localLinguisticReview(text);
+      }
+      const score = Math.max(45, Math.min(100, Math.round(100 - suggestions.length * 7)));
+      return res.json({ suggestions, score, modelUsed: modelId });
+    } catch {
+      const suggestions = localLinguisticReview(text);
+      const score = Math.max(60, Math.min(100, Math.round(100 - suggestions.length * 8)));
+      return res.json({ suggestions, score, modelUsed: 'RuleEngine' });
+    }
   }
 });
 
@@ -686,8 +1027,12 @@ apiRouter.post('/ai/paraphrase', async (req, res) => {
     style = 'natural',
     customInstruction = '',
     surroundingContext = '',
+    contextBefore = '',
+    contextAfter = '',
     isDocUncensored = false,
-    customKey
+    customKey,
+    modelId = 'gemini-2.5-flash',
+    customModel
   } = req.body;
 
   if (!text || !text.trim()) {
@@ -702,17 +1047,38 @@ apiRouter.post('/ai/paraphrase', async (req, res) => {
   const docDesc = DOCUMENT_TYPE_DESCRIPTIONS[documentType] || DOCUMENT_TYPE_DESCRIPTIONS.novel_sfw;
   const styleDesc = PARAPHRASE_STYLE_GUIDES[style] || PARAPHRASE_STYLE_GUIDES.natural;
 
-  let prompt = `System: You are an elite literary, academic, and legal editorial stylist.
-Your goal is to suggest 4 distinct, natural, human-sounding alternatives for the author's selected text.
+  // Build structured surrounding passage context
+  let passageContext = '';
+  if (contextBefore || contextAfter) {
+    const beforePart = contextBefore ? `...${contextBefore.slice(-1200)}` : '';
+    const afterPart = contextAfter ? `${contextAfter.slice(0, 1200)}...` : '';
+    passageContext = `${beforePart} >>> [TARGET TEXT TO PARAPHRASE: "${cleanText}"] <<< ${afterPart}`;
+  } else if (surroundingContext && surroundingContext.trim()) {
+    passageContext = surroundingContext.substring(0, 2500);
+  }
+
+  let prompt = `System: You are an elite literary editor, master stylist, and professional prose rewriter.
+Your goal is to suggest 4 distinct, natural, human-sounding rewritten alternatives for the author's selected text.
 The alternatives MUST sound natural, unforced, and authentically tailored to the specified Document Register.
 
+CRITICAL CONTEXTUAL HARMONY MANDATE:
+The rewritten alternatives MUST take the surrounding text directly into account:
+1. Syntactic Seamlessness: When your replacement alternative is slotted directly into the surrounding sentence/paragraph, the entire passage must read effortlessly with no grammatical collisions, awkward prepositions, or jagged transitions.
+2. Tense, Voice & Person Concord: Strictly mirror the surrounding narrative's verb tense (e.g. simple past, literary present) and point of view (1st person "I/we", 2nd person "you", or 3rd person "he/she/they").
+3. Register & Tone Flow: Maintain consistent narrative voice, atmospheric momentum, and character interiority that matches the surrounding passage.
+4. Punctuation & Boundary Care: Ensure proper capitalization and punctuation relative to surrounding commas, periods, quotation marks, or em-dashes.
+${passageContext ? `
+Surrounding Document Passage:
+"""
+${passageContext}
+"""
+` : ''}
 Target Document Register:
 ${docDesc.prompt}
 
 Desired Paraphrasing Style:
 ${styleDesc}
 ${customInstruction ? `Author's Custom Guidance:\n${customInstruction}\n` : ''}
-${surroundingContext ? `Surrounding Context in Document:\n"${surroundingContext.substring(0, 1500)}"\n` : ''}
 Selected Text to Paraphrase:
 "${cleanText}"
 Selection Scope: ${detectedType} (${words.length} word${words.length === 1 ? '' : 's'})
@@ -728,7 +1094,7 @@ Return ONLY a valid JSON object with the following structure:
       "text": "The natural rewritten alternative text.",
       "label": "Short badge (2-3 words, e.g., 'Atmospheric Depth', 'Operative Covenant', 'Sensory & Visceral', 'Empirical Hedging')",
       "tone": "2-3 word tone descriptor (e.g., 'Intense, intimate', 'Formal, statutory', 'Reflective, lyrical')",
-      "explanation": "Brief 1-sentence explanation of what changed and why it suits this register.",
+      "explanation": "Brief 1-sentence explanation of what changed and how it harmonizes with the surrounding context.",
       "fitScore": 96
     }
   ]
@@ -737,62 +1103,107 @@ Return ONLY a valid JSON object with the following structure:
 
   if (detectedType === 'word') {
     prompt += `\nSpecial Instruction for Single Word:
-Provide 4-5 nuanced, natural alternatives or evocative synonyms that fit perfectly into the surrounding sentence and register. Avoid bizarre or archaic dictionary filler unless requested.`;
+Provide 4-5 nuanced, natural alternatives or evocative synonyms that fit perfectly into the surrounding sentence and register. Ensure each alternative matches the exact grammatical role, conjugation/tense, and preposition compatibility in the immediate sentence.`;
   }
 
-  const schema = {
-    type: Type.OBJECT,
-    properties: {
-      selectionType: { type: Type.STRING },
-      documentType: { type: Type.STRING },
-      style: { type: Type.STRING },
-      alternatives: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            text: { type: Type.STRING, description: "The rewritten text alternative." },
-            label: { type: Type.STRING, description: "Short badge describing the aesthetic angle." },
-            tone: { type: Type.STRING, description: "2-3 word tone descriptor." },
-            explanation: { type: Type.STRING, description: "Brief sentence explaining the stylistic shift." },
-            fitScore: { type: Type.NUMBER, description: "Estimated natural fit score (88-99)." }
-          },
-          required: ["text", "label", "tone", "explanation", "fitScore"]
+  const isGemini = !modelId || modelId.toLowerCase().startsWith('gemini');
+
+  if (isGemini) {
+    const schema = {
+      type: Type.OBJECT,
+      properties: {
+        selectionType: { type: Type.STRING },
+        documentType: { type: Type.STRING },
+        style: { type: Type.STRING },
+        alternatives: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              text: { type: Type.STRING, description: "The rewritten text alternative." },
+              label: { type: Type.STRING, description: "Short badge describing the aesthetic angle." },
+              tone: { type: Type.STRING, description: "2-3 word tone descriptor." },
+              explanation: { type: Type.STRING, description: "Brief sentence explaining the stylistic shift." },
+              fitScore: { type: Type.NUMBER, description: "Estimated natural fit score (88-99)." }
+            },
+            required: ["text", "label", "tone", "explanation", "fitScore"]
+          }
+        }
+      },
+      required: ["alternatives"]
+    };
+
+    try {
+      const client = getGenAIClient(customKey);
+      const geminiModel = modelId && modelId.startsWith('gemini') ? modelId : 'gemini-2.5-flash';
+      const response = await client.models.generateContent({
+        model: geminiModel,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: detectedType === 'word' ? 0.4 : 0.7,
+          safetySettings: getSafetySettings(isMature)
+        }
+      }).catch(() => generateContentWithFailover(client, {
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: schema,
+          temperature: detectedType === 'word' ? 0.4 : 0.7,
+          safetySettings: getSafetySettings(isMature)
+        }
+      }));
+
+      if (response.text) {
+        try {
+          const parsed = JSON.parse(response.text);
+          if (Array.isArray(parsed.alternatives) && parsed.alternatives.length > 0) {
+            return res.json({
+              selectionType: detectedType,
+              documentType,
+              style,
+              alternatives: parsed.alternatives,
+              modelUsed: geminiModel
+            });
+          }
+        } catch (pe) {
+          console.warn('Failed to parse paraphrase JSON, falling back:', pe.message);
         }
       }
-    },
-    required: ["alternatives"]
-  };
-
-  try {
-    const client = getGenAIClient(customKey);
-    const response = await generateContentWithFailover(client, {
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: schema,
-        temperature: detectedType === 'word' ? 0.4 : 0.7,
-        safetySettings: getSafetySettings(isMature)
-      }
-    });
-
-    if (response.text) {
-      try {
-        const parsed = JSON.parse(response.text);
-        if (Array.isArray(parsed.alternatives) && parsed.alternatives.length > 0) {
-          return res.json({
-            selectionType: detectedType,
-            documentType,
-            style,
-            alternatives: parsed.alternatives
-          });
-        }
-      } catch (pe) {
-        console.warn('Failed to parse paraphrase JSON, falling back:', pe.message);
-      }
+    } catch (err) {
+      console.warn('Paraphrase API failed, using smart local fallback:', err.message);
     }
-  } catch (err) {
-    console.warn('Paraphrase API failed, using smart local fallback:', err.message);
+  } else {
+    // Non-Gemini model execution
+    try {
+      const result = await executeUnifiedModelPrompt({
+        modelId,
+        prompt,
+        temperature: detectedType === 'word' ? 0.3 : 0.7,
+        isUncensored: isMature,
+        customKey,
+        customModel
+      });
+
+      if (result.text) {
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(parsed.alternatives) && parsed.alternatives.length > 0) {
+            return res.json({
+              selectionType: detectedType,
+              documentType,
+              style,
+              alternatives: parsed.alternatives,
+              modelUsed: modelId
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Non-Gemini paraphrase attempt failed, using smart fallback:', err.message);
+    }
   }
 
   // Local fallback
@@ -801,7 +1212,8 @@ Provide 4-5 nuanced, natural alternatives or evocative synonyms that fit perfect
     selectionType: detectedType,
     documentType,
     style,
-    alternatives: fallbackAlternatives
+    alternatives: fallbackAlternatives,
+    modelUsed: 'LocalHeuristics'
   });
 });
 
@@ -813,14 +1225,37 @@ apiRouter.post('/ai/embed', async (req, res) => {
       return res.json({ embedding: [] });
     }
     const client = getGenAIClient(customKey);
-    const response = await client.models.embedContent({
-      model: 'gemini-embedding-2-preview',
-      contents: text.substring(0, 2000)
-    });
+    let response;
+    
+    // Failover list to avoid 429 quota limits on specific embedding models
+    const embedModels = ['gemini-embedding-001', 'gemini-embedding-2', 'gemini-embedding-2-preview'];
+    let lastErr = null;
+    
+    for (const model of embedModels) {
+      try {
+        response = await client.models.embedContent({
+          model,
+          contents: text.substring(0, 2000)
+        });
+        break; // Success
+      } catch (err) {
+        lastErr = err;
+        if (err.status !== 429 && err.status !== 404) {
+          throw err;
+        }
+      }
+    }
+    
+    if (!response) {
+      throw lastErr || new Error('All embedding models failed');
+    }
+
     const values = response.embeddings?.[0]?.values || response.embedding?.values || [];
     res.json({ embedding: values });
   } catch (err) {
-    console.error('Error in /api/ai/embed:', err.message);
+    if (err.status !== 429) {
+      console.error('Error in /api/ai/embed:', err.message);
+    }
     res.json({ embedding: [] });
   }
 });

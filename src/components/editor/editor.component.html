@@ -410,6 +410,8 @@
   <app-paraphrase-modal
     [selectedText]="selectedText()"
     [surroundingContext]="surroundingContext()"
+    [contextBefore]="contextBefore()"
+    [contextAfter]="contextAfter()"
     [initialDocumentType]="blockService.documentType()"
     (close)="closeParaphraseModal()"
     (replace)="applyParaphraseReplacement($event)"

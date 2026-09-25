@@ -56,8 +56,21 @@
         </div>
       </div>
 
-      <!-- Right: Metrics, Quick Tools Menu, and AI Assistant Toggle -->
+      <!-- Right: Metrics, Model Hub, Quick Tools Menu, and AI Assistant Toggle -->
       <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+        <!-- Model Hub trigger -->
+        <button 
+          (click)="openModal('models')" 
+          class="h-9 px-2 sm:px-2.5 rounded-xl border border-purple-200/80 bg-purple-50/70 hover:bg-purple-100/70 active:bg-purple-200/60 text-purple-900 text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-all cursor-pointer" 
+          title="Open AI Model Hub & Task Routing"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"/><path d="M3 9h18v6H3z"/><path d="m6 15-2 3"/><path d="m18 15 2 3"/><path d="m6 9-2-3"/><path d="m18 9 2-3"/>
+          </svg>
+          <span class="hidden sm:inline font-medium">Model Hub</span>
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        </button>
+
         <!-- Metrics trigger -->
         <button 
           (click)="openModal('metrics')" 

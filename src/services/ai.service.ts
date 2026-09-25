@@ -28,6 +28,39 @@ export class AiService {
     return key && key.trim().length > 0 ? key : undefined;
   }
 
+  private resolveModelPayload(taskRole: 'generation' | 'chat' | 'review' | 'paraphrase') {
+    const modelId = this.modelService.taskRoles()[taskRole] || 'gemini-2.5-flash';
+    const customModel = this.modelService.customModels().find(m => m.id === modelId);
+
+    let customKey: string | undefined = undefined;
+
+    if (customModel && customModel.apiKey) {
+      customKey = customModel.apiKey;
+    } else if (modelId.startsWith('gemini')) {
+      customKey = this.crypto.getActiveKeyForProvider('gemini') || undefined;
+    } else if (modelId.includes('groq') || ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'].includes(modelId)) {
+      customKey = this.crypto.getActiveKeyForProvider('groq') || undefined;
+    } else if (modelId.includes('openrouter') || modelId.includes(':free')) {
+      customKey = this.crypto.getActiveKeyForProvider('openrouter') || undefined;
+    } else if (modelId.includes('cerebras')) {
+      customKey = this.crypto.getActiveKeyForProvider('cerebras') || undefined;
+    }
+
+    return {
+      modelId,
+      customKey,
+      customModel: customModel ? {
+        id: customModel.id,
+        name: customModel.name,
+        providerType: customModel.providerType,
+        endpointUrl: customModel.endpointUrl,
+        apiKey: customModel.apiKey,
+        temperature: customModel.temperature,
+        systemPrompt: customModel.systemPrompt
+      } : undefined
+    };
+  }
+
   // Fallback linguistic reviewer if offline or server returns an error
   private localLinguisticReview(text: string): Suggestion[] {
     const suggestions: Suggestion[] = [];
@@ -142,6 +175,7 @@ export class AiService {
 
   // --- Text Generation & Inline Transformations ---
   async generateText(prompt: string, context: string, mode: AiMode = 'fast', isDocUncensored: boolean = false): Promise<string> {
+    const modelPayload = this.resolveModelPayload('generation');
     try {
       const resp = await fetch('/api/ai/generate', {
         method: 'POST',
@@ -151,7 +185,9 @@ export class AiService {
           context,
           mode,
           isDocUncensored,
-          customKey: this.getCustomKey()
+          modelId: modelPayload.modelId,
+          customKey: modelPayload.customKey,
+          customModel: modelPayload.customModel
         })
       });
 
@@ -175,13 +211,16 @@ export class AiService {
       return [];
     }
 
+    const modelPayload = this.resolveModelPayload('review');
     try {
       const resp = await fetch('/api/ai/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text,
-          customKey: this.getCustomKey()
+          modelId: modelPayload.modelId,
+          customKey: modelPayload.customKey,
+          customModel: modelPayload.customModel
         })
       });
 
@@ -213,6 +252,7 @@ export class AiService {
   // --- Synonyms and Alternatives ---
   async getAlternatives(text: string): Promise<Suggestion[]> {
     if (!text || text.length < 3) return [];
+    const modelPayload = this.resolveModelPayload('paraphrase');
     try {
       const resp = await fetch('/api/ai/generate', {
         method: 'POST',
@@ -221,7 +261,9 @@ export class AiService {
           prompt: `Identify 1-3 weak or repetitive words in this text and suggest stronger alternatives. Return as JSON array with properties: original, suggestion, type ('Alternative'), explanation.`,
           context: text,
           mode: 'fast',
-          customKey: this.getCustomKey()
+          modelId: modelPayload.modelId,
+          customKey: modelPayload.customKey,
+          customModel: modelPayload.customModel
         })
       });
       if (resp.ok) {
@@ -245,6 +287,7 @@ export class AiService {
     mode: 'doc' | 'think' | 'uncensored' | 'unfiltered' = 'doc',
     isDocUncensored: boolean = false
   ): Promise<string> {
+    const modelPayload = this.resolveModelPayload('chat');
     try {
       const resp = await fetch('/api/ai/chat', {
         method: 'POST',
@@ -256,7 +299,9 @@ export class AiService {
           mode,
           isUncensored: isDocUncensored || mode === 'uncensored' || mode === 'unfiltered',
           stream: false,
-          customKey: this.getCustomKey()
+          modelId: modelPayload.modelId,
+          customKey: modelPayload.customKey,
+          customModel: modelPayload.customModel
         })
       });
       if (resp.ok) {
@@ -279,6 +324,7 @@ export class AiService {
     isDocUncensored: boolean = false
   ): AsyncGenerator<string> {
     const isUncensoredEffective = isDocUncensored || mode === 'uncensored' || mode === 'unfiltered';
+    const modelPayload = this.resolveModelPayload('chat');
 
     try {
       const resp = await fetch('/api/ai/chat', {
@@ -291,7 +337,9 @@ export class AiService {
           mode,
           isUncensored: isUncensoredEffective,
           stream: true,
-          customKey: this.getCustomKey()
+          modelId: modelPayload.modelId,
+          customKey: modelPayload.customKey,
+          customModel: modelPayload.customModel
         })
       });
 
@@ -342,6 +390,7 @@ export class AiService {
 
   // --- Document-Type & Register Aware Paraphrasing ---
   async paraphraseText(params: ParaphraseRequest): Promise<ParaphraseResponse> {
+    const modelPayload = this.resolveModelPayload('paraphrase');
     try {
       const resp = await fetch('/api/ai/paraphrase', {
         method: 'POST',
@@ -353,8 +402,12 @@ export class AiService {
           style: params.style || 'natural',
           customInstruction: params.customInstruction,
           surroundingContext: params.surroundingContext,
+          contextBefore: params.contextBefore,
+          contextAfter: params.contextAfter,
           isDocUncensored: params.isDocUncensored,
-          customKey: this.getCustomKey()
+          modelId: modelPayload.modelId,
+          customKey: modelPayload.customKey,
+          customModel: modelPayload.customModel
         })
       });
 
