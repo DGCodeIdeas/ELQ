@@ -13,6 +13,7 @@ import { ModelsModalComponent } from './components/models-modal/models-modal.com
 import { ByokModalComponent } from './components/byok-modal/byok-modal.component';
 import { PrivacyModalComponent } from './components/privacy-modal/privacy-modal.component';
 import { AuthModalComponent } from './components/auth-modal/auth-modal.component';
+import { ExportModalComponent } from './components/export-modal/export-modal.component';
 
 @Component({
   selector: 'app-root',
@@ -25,7 +26,8 @@ import { AuthModalComponent } from './components/auth-modal/auth-modal.component
     ModelsModalComponent,
     ByokModalComponent,
     PrivacyModalComponent,
-    AuthModalComponent
+    AuthModalComponent,
+    ExportModalComponent
   ],
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,6 +61,7 @@ export class AppComponent {
   showByokModal = signal(false);
   showPrivacyModal = signal(false);
   showAuthModal = signal(false);
+  showExportModal = signal(false);
 
   toggleToolsMenu() {
     this.showToolsMenu.update(v => !v);
@@ -68,7 +71,7 @@ export class AppComponent {
     this.showToolsMenu.set(false);
   }
 
-  openModal(modal: 'metrics' | 'models' | 'byok' | 'privacy' | 'auth') {
+  openModal(modal: 'metrics' | 'models' | 'byok' | 'privacy' | 'auth' | 'export') {
     this.showToolsMenu.set(false);
     this.showMobileMenu.set(false);
     if (modal === 'metrics') this.showMetricsModal.set(true);
@@ -76,6 +79,7 @@ export class AppComponent {
     if (modal === 'byok') this.showByokModal.set(true);
     if (modal === 'privacy') this.showPrivacyModal.set(true);
     if (modal === 'auth') this.showAuthModal.set(true);
+    if (modal === 'export') this.showExportModal.set(true);
   }
 
   toggleLeftSidebar() {
@@ -104,6 +108,10 @@ export class AppComponent {
 
   handleKeyboardShortcuts(event: KeyboardEvent) {
     if (event.key === 'Escape') {
+      if (this.showExportModal()) {
+        this.showExportModal.set(false);
+        return;
+      }
       if (this.showToolsMenu()) {
         this.showToolsMenu.set(false);
         return;
@@ -116,6 +124,11 @@ export class AppComponent {
         this.showMobileChat.set(false);
         return;
       }
+    }
+    // Ctrl+E or Cmd+E opens Export Manuscript Dialog
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'e' || event.key === 'E')) {
+      event.preventDefault();
+      this.openModal('export');
     }
     // Ctrl+\ or Cmd+\ toggles Left Sidebar (Library/Chapters)
     if ((event.ctrlKey || event.metaKey) && event.key === '\\') {

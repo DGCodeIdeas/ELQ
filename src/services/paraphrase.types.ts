@@ -34,6 +34,7 @@ export interface ParaphraseRequest {
   surroundingContext?: string;
   contextBefore?: string;
   contextAfter?: string;
+  useSurroundingContext?: boolean;
   isDocUncensored?: boolean;
   customKey?: string;
 }

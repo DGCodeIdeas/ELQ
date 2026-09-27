@@ -1,6 +1,7 @@
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { StorageService, Document, Chapter, ChatMessage, ChatSession, WordCountHistoryPoint, WritingGoals, Block, CensorshipConfig } from './storage.service';
 import { RagService } from './rag.service';
+import { ReadabilityService, ReadabilityMetrics, AudienceMatchResult } from './readability.service';
 import JSZip from 'jszip';
 
 export const DEFAULT_SENSITIVE_TERMS = [
@@ -82,6 +83,7 @@ export function blocksToHtml(blocks: Block[]): string {
 export class BlockService {
   private storage = inject(StorageService);
   ragService = inject(RagService);
+  readabilityService = inject(ReadabilityService);
 
   // State
   readonly isLoading = signal(true);
@@ -168,6 +170,30 @@ export class BlockService {
   readonly dailyProgress = computed(() => {
     const target = this.dailyTarget() || 1;
     return Math.min(100, Math.round((this.wordsWrittenToday() / target) * 100));
+  });
+
+  // --- Real-time Readability & Audience Calibration Metrics ---
+  readonly activeChapterReadability = computed<ReadabilityMetrics>(() => {
+    return this.readabilityService.analyzeText(this.activeChapterContent());
+  });
+
+  readonly fullDocumentReadability = computed<ReadabilityMetrics>(() => {
+    const chapters = this.chapters();
+    if (chapters.length === 0) return this.readabilityService.analyzeText('');
+    const fullText = chapters.map(c => c.content || '').join('\n\n');
+    return this.readabilityService.analyzeText(fullText);
+  });
+
+  readonly activeAudienceMatch = computed<AudienceMatchResult>(() => {
+    const metrics = this.activeChapterReadability();
+    const profile = this.readabilityService.currentAudienceProfile();
+    return this.readabilityService.evaluateAudienceMatch(metrics, profile);
+  });
+
+  readonly fullDocAudienceMatch = computed<AudienceMatchResult>(() => {
+    const metrics = this.fullDocumentReadability();
+    const profile = this.readabilityService.currentAudienceProfile();
+    return this.readabilityService.evaluateAudienceMatch(metrics, profile);
   });
 
   // --- Document Type / Register Signal ---
@@ -742,28 +768,124 @@ export class BlockService {
 
   // --- Export ---
   
-  async downloadDocument(format: 'html' | 'txt' | 'markdown' | 'json' | 'epub') {
+  async downloadDocument(format: 'html' | 'txt' | 'markdown' | 'json' | 'epub' | 'pdf', options?: { respectRedactions?: boolean }) {
      const doc = this.currentDoc();
      if (!doc) return;
 
+     const shouldRedact = options?.respectRedactions !== undefined ? options.respectRedactions : !this.isUncensored();
+     const style = this.redactionStyle();
+
      if (format === 'epub') {
-         await this.exportEpub(doc);
+         await this.exportEpub(doc, shouldRedact);
          return;
+     }
+
+     if (format === 'pdf') {
+       const { jsPDF } = await import('jspdf');
+       const pdf = new jsPDF({
+         orientation: 'portrait',
+         unit: 'pt',
+         format: 'letter'
+       });
+       const margin = 54;
+       const pageWidth = pdf.internal.pageSize.getWidth();
+       const printableWidth = pageWidth - (margin * 2);
+       let currentY = margin;
+
+       pdf.setFont('times', 'bold');
+       pdf.setFontSize(22);
+       const titleLines = pdf.splitTextToSize(doc.title || 'Untitled', printableWidth);
+       pdf.text(titleLines, margin, currentY + 16);
+       currentY += (titleLines.length * 26) + 20;
+
+       for (let i = 0; i < doc.chapters.length; i++) {
+         const ch = doc.chapters[i];
+         if (i > 0) {
+           pdf.addPage();
+           currentY = margin + 20;
+         }
+         pdf.setFont('times', 'bold');
+         pdf.setFontSize(15);
+         pdf.text(ch.title || `Chapter ${i + 1}`, margin, currentY);
+         currentY += 22;
+
+         let raw = ch.content || '';
+         if (shouldRedact) {
+           raw = this.redactHtml(raw);
+         }
+         const div = document.createElement('div');
+         div.innerHTML = raw.replace(/<\/p>/gi, '\n\n').replace(/<br\s*[\/]?>/gi, '\n');
+         const text = (div.textContent || '').trim();
+         
+         pdf.setFont('times', 'normal');
+         pdf.setFontSize(11);
+         const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
+         for (const p of paragraphs) {
+           const lines = pdf.splitTextToSize(p, printableWidth);
+           for (const line of lines) {
+             if (currentY > pdf.internal.pageSize.getHeight() - margin - 30) {
+               pdf.addPage();
+               currentY = margin + 20;
+               pdf.setFont('times', 'normal');
+               pdf.setFontSize(11);
+             }
+             pdf.text(line, margin, currentY);
+             currentY += 15;
+           }
+           currentY += 6;
+         }
+       }
+
+       pdf.save(`${(doc.title || 'Untitled').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+       return;
      }
      
      // Join all chapters for other formats
-     let fullContent = doc.chapters.map(c => c.content).join('\n\n<hr class="chapter-break" />\n\n');
+     let fullContent = doc.chapters.map(c => {
+       const raw = c.content || '';
+       return shouldRedact ? this.redactHtml(raw) : raw;
+     }).join('\n\n<hr class="chapter-break" />\n\n');
      
      if (format === 'txt') {
          const div = document.createElement('div');
          div.innerHTML = fullContent;
-         fullContent = div.textContent || '';
+         let text = div.textContent || '';
+         if (shouldRedact) {
+           const terms = this.allSensitiveTerms();
+           if (terms.length > 0) {
+             const escaped = terms.map(t => t.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean).join('|');
+             if (escaped) {
+               const regex = new RegExp(`\\b(${escaped})\\b`, 'gi');
+               text = text.replace(regex, (m: string) => {
+                 if (style === 'blackbar' || style === 'blackout') return '█'.repeat(Math.max(4, m.length));
+                 if (style === 'asterisks') return '*'.repeat(Math.max(3, m.length));
+                 return '[REDACTED]';
+               });
+             }
+           }
+         }
+         fullContent = text;
      } else if (format === 'markdown') {
-        fullContent = fullContent
+        let md = fullContent
            .replace(/<h1>(.*?)<\/h1>/g, '# $1\n\n')
            .replace(/<h2>(.*?)<\/h2>/g, '## $1\n\n')
            .replace(/<p>(.*?)<\/p>/g, '$1\n\n')
            .replace(/<[^>]*>/g, '');
+        if (shouldRedact) {
+          const terms = this.allSensitiveTerms();
+          if (terms.length > 0) {
+            const escaped = terms.map(t => t.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).filter(Boolean).join('|');
+            if (escaped) {
+              const regex = new RegExp(`\\b(${escaped})\\b`, 'gi');
+              md = md.replace(regex, (m: string) => {
+                if (style === 'blackbar' || style === 'blackout') return '█'.repeat(Math.max(4, m.length));
+                if (style === 'asterisks') return '*'.repeat(Math.max(3, m.length));
+                return '[REDACTED]';
+              });
+            }
+          }
+        }
+        fullContent = md;
      }
 
      const mime = format === 'json' ? 'application/json' : (format === 'txt' ? 'text/plain' : 'text/html');
@@ -780,7 +902,7 @@ export class BlockService {
      URL.revokeObjectURL(url);
   }
 
-  private async exportEpub(doc: Document) {
+  private async exportEpub(doc: Document, shouldRedact = false) {
       const zip = new JSZip();
       
       // 1. mimetype
@@ -821,7 +943,7 @@ export class BlockService {
   </style>
 </head>
 <body>
-  ${chapter.content}
+  ${shouldRedact ? this.redactHtml(chapter.content) : chapter.content}
 </body>
 </html>`;
           

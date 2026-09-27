@@ -1029,6 +1029,7 @@ apiRouter.post('/ai/paraphrase', async (req, res) => {
     surroundingContext = '',
     contextBefore = '',
     contextAfter = '',
+    useSurroundingContext = true,
     isDocUncensored = false,
     customKey,
     modelId = 'gemini-2.5-flash',
@@ -1047,21 +1048,25 @@ apiRouter.post('/ai/paraphrase', async (req, res) => {
   const docDesc = DOCUMENT_TYPE_DESCRIPTIONS[documentType] || DOCUMENT_TYPE_DESCRIPTIONS.novel_sfw;
   const styleDesc = PARAPHRASE_STYLE_GUIDES[style] || PARAPHRASE_STYLE_GUIDES.natural;
 
-  // Build structured surrounding passage context
+  const isContextActive = useSurroundingContext !== false && useSurroundingContext !== 'false';
+
+  // Build structured surrounding passage context if enabled
   let passageContext = '';
-  if (contextBefore || contextAfter) {
-    const beforePart = contextBefore ? `...${contextBefore.slice(-1200)}` : '';
-    const afterPart = contextAfter ? `${contextAfter.slice(0, 1200)}...` : '';
-    passageContext = `${beforePart} >>> [TARGET TEXT TO PARAPHRASE: "${cleanText}"] <<< ${afterPart}`;
-  } else if (surroundingContext && surroundingContext.trim()) {
-    passageContext = surroundingContext.substring(0, 2500);
+  if (isContextActive) {
+    if (contextBefore || contextAfter) {
+      const beforePart = contextBefore ? `...${contextBefore.slice(-1200)}` : '';
+      const afterPart = contextAfter ? `${contextAfter.slice(0, 1200)}...` : '';
+      passageContext = `${beforePart} >>> [TARGET TEXT TO PARAPHRASE: "${cleanText}"] <<< ${afterPart}`;
+    } else if (surroundingContext && surroundingContext.trim()) {
+      passageContext = surroundingContext.substring(0, 2500);
+    }
   }
 
   let prompt = `System: You are an elite literary editor, master stylist, and professional prose rewriter.
 Your goal is to suggest 4 distinct, natural, human-sounding rewritten alternatives for the author's selected text.
 The alternatives MUST sound natural, unforced, and authentically tailored to the specified Document Register.
 
-CRITICAL CONTEXTUAL HARMONY MANDATE:
+${isContextActive ? `CRITICAL CONTEXTUAL HARMONY MANDATE:
 The rewritten alternatives MUST take the surrounding text directly into account:
 1. Syntactic Seamlessness: When your replacement alternative is slotted directly into the surrounding sentence/paragraph, the entire passage must read effortlessly with no grammatical collisions, awkward prepositions, or jagged transitions.
 2. Tense, Voice & Person Concord: Strictly mirror the surrounding narrative's verb tense (e.g. simple past, literary present) and point of view (1st person "I/we", 2nd person "you", or 3rd person "he/she/they").
@@ -1072,7 +1077,10 @@ Surrounding Document Passage:
 """
 ${passageContext}
 """
-` : ''}
+` : ''}` : `STANDALONE REWRITING MODE (SURROUNDING CONTEXT TOGGLED OFF):
+The author has deliberately chosen to rewrite this selected text in isolation.
+Focus exclusively on the highlighted words themselves. Do not make assumptions about external document context or outer sentence constraints. Provide fresh, punchy, and self-contained alternative phrasings that embody the requested Register and Style with maximum literary excellence.`}
+
 Target Document Register:
 ${docDesc.prompt}
 
@@ -1094,7 +1102,7 @@ Return ONLY a valid JSON object with the following structure:
       "text": "The natural rewritten alternative text.",
       "label": "Short badge (2-3 words, e.g., 'Atmospheric Depth', 'Operative Covenant', 'Sensory & Visceral', 'Empirical Hedging')",
       "tone": "2-3 word tone descriptor (e.g., 'Intense, intimate', 'Formal, statutory', 'Reflective, lyrical')",
-      "explanation": "Brief 1-sentence explanation of what changed and how it harmonizes with the surrounding context.",
+      "explanation": "${isContextActive ? 'Brief 1-sentence explanation of what changed and how it harmonizes with the surrounding context.' : 'Brief 1-sentence explanation of the stylistic refinement.'}",
       "fitScore": 96
     }
   ]

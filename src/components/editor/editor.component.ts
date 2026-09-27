@@ -38,6 +38,7 @@ export class EditorComponent {
 
   @ViewChild('editor') editorRef!: ElementRef<HTMLDivElement>;
   @Output() focusModeChange = new EventEmitter<boolean>();
+  @Output() requestExport = new EventEmitter<void>();
   
   editorContent = signal<string>('');
   safeContent = computed(() => this.sanitizer.bypassSecurityTrustHtml(this.editorContent()));

@@ -404,6 +404,7 @@ export class AiService {
           surroundingContext: params.surroundingContext,
           contextBefore: params.contextBefore,
           contextAfter: params.contextAfter,
+          useSurroundingContext: params.useSurroundingContext,
           isDocUncensored: params.isDocUncensored,
           modelId: modelPayload.modelId,
           customKey: modelPayload.customKey,

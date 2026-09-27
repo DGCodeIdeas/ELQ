@@ -49,13 +49,30 @@ interface DiffToken {
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
                   {{ detectedScope() }}
                 </span>
+                <button 
+                  type="button"
+                  (click)="toggleSurroundingContext()" 
+                  class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-colors flex items-center gap-1 cursor-pointer select-none"
+                  [class.bg-emerald-50]="useSurroundingContext()"
+                  [class.text-emerald-800]="useSurroundingContext()"
+                  [class.border-emerald-200]="useSurroundingContext()"
+                  [class.bg-gray-100]="!useSurroundingContext()"
+                  [class.text-gray-600]="!useSurroundingContext()"
+                  [class.border-gray-300]="!useSurroundingContext()"
+                  [title]="useSurroundingContext() ? 'Surrounding Context is ON - click to toggle OFF' : 'Surrounding Context is OFF - click to toggle ON'"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full" [class.bg-emerald-500]="useSurroundingContext()" [class.bg-gray-400]="!useSurroundingContext()"></span>
+                  <span>Context: {{ useSurroundingContext() ? 'ON' : 'OFF' }}</span>
+                </button>
                 @if (isMatureRegister()) {
                   <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-pink-100 text-pink-700 border border-pink-200">
                     Mature 18+ Uncensored
                   </span>
                 }
               </div>
-              <p class="text-xs text-gray-500">Context-aware natural alternatives adapted to your exact document type & register</p>
+              <p class="text-xs text-gray-500">
+                {{ useSurroundingContext() ? 'Context-aware natural alternatives adapted to your exact document passage & register' : 'Standalone rewrites focused strictly on selected phrasing in isolation' }}
+              </p>
             </div>
           </div>
 
@@ -189,41 +206,111 @@ interface DiffToken {
           </div>
 
           <!-- Surrounding Context Awareness Banner -->
-          <div class="bg-gradient-to-r from-indigo-50/80 via-purple-50/50 to-white border border-indigo-100/90 rounded-xl p-3 space-y-2">
-            <div class="flex items-center justify-between">
+          <div 
+            class="transition-all duration-200 rounded-xl p-3 sm:p-3.5 space-y-2.5 border"
+            [class.bg-gradient-to-r]="true"
+            [class.from-indigo-50]="useSurroundingContext()"
+            [class.via-purple-50]="useSurroundingContext()"
+            [class.border-indigo-100]="useSurroundingContext()"
+            [class.from-slate-50]="!useSurroundingContext()"
+            [class.via-gray-50]="!useSurroundingContext()"
+            [class.border-gray-200]="!useSurroundingContext()"
+            class="to-white"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-2.5">
               <div class="flex items-center gap-2">
-                <span class="relative flex h-2 w-2">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span class="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                  <span>Surrounding Context Integration:</span>
-                  <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-emerald-200">
-                    Active & Harmonized
+                @if (useSurroundingContext()) {
+                  <span class="relative flex h-2.5 w-2.5">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                   </span>
-                </span>
-                @if (hasSurroundingContext()) {
-                  <span class="hidden sm:inline text-[11px] text-gray-400">
-                    ({{ (contextBefore.length + contextAfter.length) || surroundingContext.length }} chars passage context)
-                  </span>
+                } @else {
+                  <span class="inline-flex rounded-full h-2.5 w-2.5 bg-gray-400"></span>
                 }
+
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-xs font-bold text-gray-900">Surrounding Context:</span>
+                  @if (useSurroundingContext()) {
+                    <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-emerald-200">
+                      ON &bull; Harmonized
+                    </span>
+                    @if (hasSurroundingContext()) {
+                      <span class="hidden sm:inline text-[11px] text-gray-500">
+                        ({{ (contextBefore.length + contextAfter.length) || surroundingContext.length }} chars document context)
+                      </span>
+                    }
+                  } @else {
+                    <span class="text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-slate-200">
+                      OFF &bull; Standalone Mode
+                    </span>
+                    <span class="hidden sm:inline text-[11px] text-gray-500">
+                      (Rewriting selected snippet in isolation)
+                    </span>
+                  }
+                </div>
               </div>
 
-              <button 
-                (click)="showContextViewer.set(!showContextViewer())"
-                class="text-xs font-medium text-indigo-700 hover:text-indigo-900 flex items-center gap-1 cursor-pointer transition-colors"
-                title="Inspect surrounding document context captured for this rewrite"
-              >
-                <span>{{ showContextViewer() ? 'Hide Context Inspector' : 'Inspect Surrounding Context' }}</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.rotate-180]="showContextViewer()"><polyline points="6 9 12 15 18 9"/></svg>
-              </button>
+              <!-- Interactive Toggle Switch & Context Inspector Trigger -->
+              <div class="flex items-center gap-3">
+                @if (useSurroundingContext()) {
+                  <button 
+                    (click)="showContextViewer.set(!showContextViewer())"
+                    class="text-xs font-medium text-indigo-700 hover:text-indigo-900 flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Inspect surrounding document context captured for this rewrite"
+                  >
+                    <span>{{ showContextViewer() ? 'Hide Context' : 'Inspect Context' }}</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.rotate-180]="showContextViewer()"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  <div class="h-3.5 w-px bg-indigo-200 hidden sm:block"></div>
+                }
+
+                <!-- Context Toggle Switch Button -->
+                <button 
+                  type="button" 
+                  (click)="toggleSurroundingContext()"
+                  class="flex items-center gap-2 group cursor-pointer select-none bg-white/90 hover:bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-2xs transition-all"
+                  [attr.aria-checked]="useSurroundingContext()"
+                  role="switch"
+                  [title]="useSurroundingContext() ? 'Turn OFF surrounding context to rewrite in isolated standalone mode' : 'Turn ON surrounding context to blend with neighboring sentences'"
+                >
+                  <span class="text-xs font-medium text-gray-700 group-hover:text-gray-900">
+                    {{ useSurroundingContext() ? 'Context Active' : 'Context Paused' }}
+                  </span>
+                  <div 
+                    class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out"
+                    [class.bg-purple-600]="useSurroundingContext()"
+                    [class.bg-gray-300]="!useSurroundingContext()"
+                  >
+                    <span 
+                      class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out"
+                      [class.translate-x-4.5]="useSurroundingContext()"
+                      [class.translate-x-1]="!useSurroundingContext()"
+                    ></span>
+                  </div>
+                </button>
+              </div>
             </div>
 
-            <p class="text-[11px] text-gray-500 leading-relaxed">
-              Every alternative strictly conforms to surrounding verb tenses, narrative voice (1st/3rd person), dialogue cadence, and preceding/following sentence flow.
-            </p>
+            <!-- Descriptive text explaining current mode -->
+            @if (useSurroundingContext()) {
+              <p class="text-[11px] text-gray-500 leading-relaxed">
+                Alternatives strictly conform to surrounding verb tenses, narrative voice (1st/3rd person), dialogue cadence, and preceding/following sentence flow.
+              </p>
+            } @else {
+              <div class="flex items-center justify-between text-[11px] text-gray-500 leading-relaxed">
+                <p>
+                  Rewriter focuses exclusively on the highlighted words in standalone isolation without factoring in surrounding document sentences or boundaries.
+                </p>
+                <button 
+                  (click)="toggleSurroundingContext()" 
+                  class="ml-2 text-purple-700 hover:text-purple-900 font-semibold underline shrink-0 cursor-pointer text-xs"
+                >
+                  Turn ON
+                </button>
+              </div>
+            }
 
-            @if (showContextViewer()) {
+            @if (useSurroundingContext() && showContextViewer()) {
               <div class="mt-2 pt-2 border-t border-indigo-100/80 text-xs text-gray-700 font-serif leading-relaxed bg-white/90 p-3 rounded-lg border border-indigo-100 shadow-2xs">
                 <div class="text-[10px] font-sans uppercase font-bold text-indigo-900/60 mb-1.5 tracking-wider flex items-center gap-1.5">
                   <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
@@ -289,15 +376,30 @@ interface DiffToken {
               <div class="flex items-center gap-2">
                 <!-- Diff Mode Toggle -->
                 <button 
+                  type="button"
                   (click)="showDiffMode.set(!showDiffMode())"
-                  [class]="'px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border ' + 
+                  [class]="'px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ' + 
                     (showDiffMode() 
                       ? 'bg-purple-50 text-purple-800 border-purple-300' 
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50')"
                   title="Toggle visual diff highlighting changes"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
-                  <span>Diff View: {{ showDiffMode() ? 'ON' : 'OFF' }}</span>
+                  <span>Diff: {{ showDiffMode() ? 'ON' : 'OFF' }}</span>
+                </button>
+
+                <!-- Quick Context Toggle Button -->
+                <button 
+                  type="button"
+                  (click)="toggleSurroundingContext()"
+                  [class]="'px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer select-none ' + 
+                    (useSurroundingContext() 
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                      : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100')"
+                  [title]="useSurroundingContext() ? 'Surrounding Context is ON - click to switch to Standalone mode' : 'Surrounding Context is OFF - click to switch to Context-Aware mode'"
+                >
+                  <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="useSurroundingContext()" [class.bg-gray-400]="!useSurroundingContext()"></span>
+                  <span>Context: {{ useSurroundingContext() ? 'ON' : 'OFF' }}</span>
                 </button>
               </div>
 
@@ -413,9 +515,16 @@ interface DiffToken {
                     <!-- Live Passage Flow Preview -->
                     @if (previewContextForAlt() === alt.text) {
                       <div class="p-3 bg-purple-50/80 border border-purple-200/90 rounded-xl text-xs sm:text-sm font-serif leading-relaxed text-gray-800 animate-in fade-in duration-150">
-                        <div class="text-[10px] font-sans uppercase font-bold text-purple-800 mb-1 flex items-center gap-1.5 tracking-wider">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                          <span>Full Passage Flow Preview:</span>
+                        <div class="text-[10px] font-sans uppercase font-bold text-purple-800 mb-1 flex items-center justify-between tracking-wider">
+                          <div class="flex items-center gap-1.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Full Passage Flow Preview:</span>
+                          </div>
+                          @if (!useSurroundingContext()) {
+                            <span class="text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded text-[9px] border border-amber-200 font-sans font-semibold">
+                              Generated in Standalone Mode
+                            </span>
+                          }
                         </div>
                         <span class="text-gray-500">{{ getContextExcerptBefore() }}</span>
                         <span class="bg-purple-200/90 text-purple-950 font-bold px-1.5 py-0.5 rounded shadow-2xs mx-1 inline border border-purple-300">
@@ -438,7 +547,7 @@ interface DiffToken {
                           title="Preview how this alternative reads inside your full surrounding passage"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                          <span>{{ previewContextForAlt() === alt.text ? 'Hide Flow' : 'Flow in Context' }}</span>
+                          <span>{{ previewContextForAlt() === alt.text ? 'Hide Flow' : (useSurroundingContext() ? 'Flow in Context' : 'Preview in Passage') }}</span>
                         </button>
 
                         <!-- Copy button -->
@@ -517,6 +626,7 @@ export class ParaphraseModalComponent implements OnInit, OnChanges {
   @Input() contextAfter = '';
   @Input() initialDocumentType?: string;
   @Input() initialStyle = 'natural';
+  @Input() initialUseSurroundingContext?: boolean;
 
   @Output() close = new EventEmitter<void>();
   @Output() replace = new EventEmitter<string>();
@@ -534,6 +644,7 @@ export class ParaphraseModalComponent implements OnInit, OnChanges {
   showDiffMode = signal<boolean>(false);
   showContextViewer = signal<boolean>(false);
   previewContextForAlt = signal<string | null>(null);
+  useSurroundingContext = signal<boolean>(true);
 
   isLoading = signal<boolean>(false);
   alternatives = signal<ParaphraseAlternative[]>([]);
@@ -590,8 +701,29 @@ export class ParaphraseModalComponent implements OnInit, OnChanges {
     this.currentDocType.set(docType);
     this.currentStyle.set(this.initialStyle || 'natural');
 
+    // Load surrounding context preference
+    const savedPref = typeof localStorage !== 'undefined' ? localStorage.getItem('novelist_paraphrase_use_context') : null;
+    if (this.initialUseSurroundingContext !== undefined) {
+      this.useSurroundingContext.set(this.initialUseSurroundingContext);
+    } else if (savedPref !== null) {
+      this.useSurroundingContext.set(savedPref !== 'false');
+    }
+
     // Auto-generate if text is provided
     if (raw.trim().length > 0) {
+      this.generateAlternatives();
+    }
+  }
+
+  toggleSurroundingContext() {
+    const newVal = !this.useSurroundingContext();
+    this.useSurroundingContext.set(newVal);
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('novelist_paraphrase_use_context', String(newVal));
+      }
+    } catch {}
+    if (this.editableText().trim()) {
       this.generateAlternatives();
     }
   }
@@ -625,7 +757,8 @@ export class ParaphraseModalComponent implements OnInit, OnChanges {
 
     this.isLoading.set(true);
     const docDef = this.selectedDocDef();
-    this.lastGeneratedRegister.set(docDef ? `${docDef.name} (${this.selectedStyleDef()?.name})` : '');
+    const contextTag = this.useSurroundingContext() ? 'Context-Aware' : 'Standalone';
+    this.lastGeneratedRegister.set(docDef ? `${docDef.name} (${this.selectedStyleDef()?.name}) • ${contextTag}` : '');
 
     try {
       const resp = await this.aiService.paraphraseText({
@@ -634,9 +767,10 @@ export class ParaphraseModalComponent implements OnInit, OnChanges {
         documentType: this.currentDocType(),
         style: this.currentStyle(),
         customInstruction: this.customInstruction(),
-        surroundingContext: this.surroundingContext,
-        contextBefore: this.contextBefore,
-        contextAfter: this.contextAfter,
+        surroundingContext: this.useSurroundingContext() ? this.surroundingContext : undefined,
+        contextBefore: this.useSurroundingContext() ? this.contextBefore : undefined,
+        contextAfter: this.useSurroundingContext() ? this.contextAfter : undefined,
+        useSurroundingContext: this.useSurroundingContext(),
         isDocUncensored: this.blockService.isUncensored() || this.isMatureRegister()
       });
 
