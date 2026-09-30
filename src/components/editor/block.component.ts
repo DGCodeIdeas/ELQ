@@ -80,15 +80,15 @@ export class BlockComponent implements AfterViewInit, OnChanges {
   }
 
   getClass() {
-    const base = "transition-all duration-200 ease-in-out selection:bg-brand-100 selection:text-brand-900 focus:outline-none";
+    const base = "transition-all duration-200 ease-in-out selection:bg-brand-100 dark:selection:bg-purple-950 selection:text-brand-900 dark:selection:text-purple-200 focus:outline-none";
     switch (this.block.type) {
-      case 'h1': return `${base} text-3xl md:text-4xl font-semibold tracking-tight text-gray-900 mb-4 mt-8 leading-tight`;
-      case 'h2': return `${base} text-xl md:text-2xl font-medium tracking-tight text-gray-800 mb-3 mt-6 leading-snug`;
-      case 'bullet': return `${base} list-disc list-outside ml-5 text-base md:text-lg text-gray-700 leading-7 mb-1 marker:text-gray-400 pl-1`;
-      case 'code': return `${base} font-mono text-sm bg-gray-50 text-gray-800 p-4 rounded-lg border border-gray-200 my-4 shadow-sm overflow-x-auto`;
-      case 'quote': return `${base} text-lg text-gray-600 italic border-l-4 border-gray-300 pl-5 py-1 my-6`;
+      case 'h1': return `${base} text-3xl md:text-4xl font-semibold tracking-tight text-gray-900 dark:text-zinc-100 mb-4 mt-8 leading-tight`;
+      case 'h2': return `${base} text-xl md:text-2xl font-medium tracking-tight text-gray-800 dark:text-zinc-200 mb-3 mt-6 leading-snug`;
+      case 'bullet': return `${base} list-disc list-outside ml-5 text-base md:text-lg text-gray-700 dark:text-zinc-300 leading-7 mb-1 marker:text-gray-400 dark:marker:text-zinc-500 pl-1`;
+      case 'code': return `${base} font-mono text-sm bg-gray-50 dark:bg-zinc-850 text-gray-800 dark:text-zinc-200 p-4 rounded-lg border border-gray-200 dark:border-zinc-700 my-4 shadow-sm overflow-x-auto`;
+      case 'quote': return `${base} text-lg text-gray-600 dark:text-zinc-400 italic border-l-4 border-gray-300 dark:border-zinc-600 pl-5 py-1 my-6`;
       case 'divider': return `hidden`; 
-      default: return `${base} text-base md:text-lg text-gray-700 leading-7 mb-2`; // Paragraph
+      default: return `${base} text-base md:text-lg text-gray-700 dark:text-zinc-300 leading-7 mb-2`; // Paragraph
     }
   }
 

@@ -14,12 +14,12 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
     <div class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
       <div class="fixed inset-0 bg-black/45 backdrop-blur-xs transition-opacity" (click)="close.emit()"></div>
 
-      <div class="relative w-full max-w-3xl bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+      <div class="relative w-full max-w-3xl bg-white dark:bg-zinc-900 text-gray-800 dark:text-zinc-200 rounded-2xl shadow-2xl border border-gray-100 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
         
         <!-- Modal Header -->
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/80 shrink-0">
+        <div class="px-6 py-4 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-gray-50/80 dark:bg-zinc-900/80 shrink-0">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold shadow-2xs">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 flex items-center justify-center font-bold shadow-2xs">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
                 <path d="M6 6h10"/>
@@ -29,82 +29,82 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h2 class="text-base font-bold text-gray-900">Document Productivity & Readability</h2>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-800">
+                <h2 class="text-base font-bold text-gray-900 dark:text-zinc-100">Document Productivity & Readability</h2>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300">
                   Grade {{ currentMetrics().fleschKincaidGradeLevel }}
                 </span>
               </div>
-              <p class="text-xs text-gray-500">Quantitative complexity metrics, Flesch-Kincaid readability, and writing progression</p>
+              <p class="text-xs text-gray-500 dark:text-zinc-400">Quantitative complexity metrics, Flesch-Kincaid readability, and writing progression</p>
             </div>
           </div>
           <button 
             (click)="close.emit()" 
-            class="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+            class="p-2 text-gray-400 dark:text-zinc-400 hover:text-gray-600 dark:hover:text-zinc-200 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors"
             title="Close dialog (Esc)"
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
 
-        <div class="overflow-y-auto p-5 sm:p-6 space-y-6 flex-1 text-gray-800">
+        <div class="overflow-y-auto p-5 sm:p-6 space-y-6 flex-1 text-gray-800 dark:text-zinc-200">
 
           <!-- Core Stat Cards -->
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div class="bg-gray-50/90 border border-gray-100 p-3 rounded-xl">
-              <span class="text-[11px] font-medium text-gray-500 uppercase tracking-wider block">Current Words</span>
-              <span class="text-2xl font-bold text-gray-900 mt-1 block">{{ blockService.wordCount() | number }}</span>
-              <span class="text-[10px] text-gray-400">{{ blockService.chapters().length }} chapter(s)</span>
+            <div class="bg-gray-50/90 dark:bg-zinc-800/80 border border-gray-100 dark:border-zinc-700/80 p-3 rounded-xl">
+              <span class="text-[11px] font-medium text-gray-500 dark:text-zinc-400 uppercase tracking-wider block">Current Words</span>
+              <span class="text-2xl font-bold text-gray-900 dark:text-zinc-100 mt-1 block">{{ blockService.wordCount() | number }}</span>
+              <span class="text-[10px] text-gray-400 dark:text-zinc-500">{{ blockService.chapters().length }} chapter(s)</span>
             </div>
-            <div class="bg-purple-50/70 border border-purple-100 p-3 rounded-xl">
-              <span class="text-[11px] font-medium text-purple-700 uppercase tracking-wider block">Document Goal</span>
-              <span class="text-2xl font-bold text-purple-900 mt-1 block">{{ blockService.documentProgress() }}%</span>
-              <span class="text-[10px] text-purple-600 font-medium">{{ wordsLeftToDocTarget() }} words remaining</span>
+            <div class="bg-purple-50/70 dark:bg-purple-950/30 border border-purple-100 dark:border-purple-900/50 p-3 rounded-xl">
+              <span class="text-[11px] font-medium text-purple-700 dark:text-purple-300 uppercase tracking-wider block">Document Goal</span>
+              <span class="text-2xl font-bold text-purple-900 dark:text-purple-200 mt-1 block">{{ blockService.documentProgress() }}%</span>
+              <span class="text-[10px] text-purple-600 dark:text-purple-400 font-medium">{{ wordsLeftToDocTarget() }} words remaining</span>
             </div>
-            <div class="bg-emerald-50/70 border border-emerald-100 p-3 rounded-xl">
-              <span class="text-[11px] font-medium text-emerald-700 uppercase tracking-wider block">Reading Time</span>
-              <span class="text-2xl font-bold text-emerald-900 mt-1 block">{{ blockService.readingTime() }} min</span>
-              <span class="text-[10px] text-emerald-600 font-medium">at ~200 wpm</span>
+            <div class="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50 p-3 rounded-xl">
+              <span class="text-[11px] font-medium text-emerald-700 dark:text-emerald-300 uppercase tracking-wider block">Reading Time</span>
+              <span class="text-2xl font-bold text-emerald-900 dark:text-emerald-200 mt-1 block">{{ blockService.readingTime() }} min</span>
+              <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">at ~200 wpm</span>
             </div>
-            <div class="bg-sky-50/70 border border-sky-100 p-3 rounded-xl">
-              <span class="text-[11px] font-medium text-sky-700 uppercase tracking-wider block">Speaking Time</span>
-              <span class="text-2xl font-bold text-sky-900 mt-1 block">{{ blockService.speakingTime() }} min</span>
-              <span class="text-[10px] text-sky-600 font-medium">at ~130 wpm</span>
+            <div class="bg-sky-50/70 dark:bg-sky-950/30 border border-sky-100 dark:border-sky-900/50 p-3 rounded-xl">
+              <span class="text-[11px] font-medium text-sky-700 dark:text-sky-300 uppercase tracking-wider block">Speaking Time</span>
+              <span class="text-2xl font-bold text-sky-900 dark:text-sky-200 mt-1 block">{{ blockService.speakingTime() }} min</span>
+              <span class="text-[10px] text-sky-600 dark:text-sky-400 font-medium">at ~130 wpm</span>
             </div>
           </div>
 
           <!-- ============================================================== -->
           <!-- READABILITY & AUDIENCE LEVEL CALIBRATION (THE REQUESTED FEATURE) -->
           <!-- ============================================================== -->
-          <div class="border border-purple-100 bg-gradient-to-b from-purple-50/30 via-white to-white rounded-2xl p-5 shadow-xs space-y-5">
+          <div class="border border-purple-100 dark:border-zinc-700 bg-gradient-to-b from-purple-50/30 dark:from-purple-950/20 via-white dark:via-zinc-900 to-white dark:to-zinc-900 rounded-2xl p-5 shadow-xs space-y-5">
             
             <!-- Section Header & Scope Selector -->
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 dark:border-zinc-800">
               <div>
                 <div class="flex items-center gap-2">
-                  <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-600">
+                  <h3 class="text-sm font-bold text-gray-900 dark:text-zinc-100 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-600 dark:text-purple-400">
                       <circle cx="12" cy="12" r="10"/>
                       <path d="M12 6v6l4 2"/>
                     </svg>
                     Text Readability & Complexity Score
                   </h3>
-                  <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 text-emerald-800">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                     Live Analyzer
                   </span>
                 </div>
-                <p class="text-xs text-gray-500 mt-0.5">
+                <p class="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">
                   Flesch-Kincaid & multi-index algorithms calibrated against intended reader demographics
                 </p>
               </div>
 
               <!-- Scope Toggle: Active Chapter vs Whole Document -->
-              <div class="inline-flex p-1 bg-gray-100 rounded-xl text-xs font-medium self-start sm:self-auto shrink-0 border border-gray-200/80">
+              <div class="inline-flex p-1 bg-gray-100 dark:bg-zinc-800 rounded-xl text-xs font-medium self-start sm:self-auto shrink-0 border border-gray-200/80 dark:border-zinc-700">
                 <button
                   (click)="analysisScope.set('chapter')"
                   [class]="'px-3 py-1 rounded-lg transition-all ' + 
                     (analysisScope() === 'chapter' 
-                      ? 'bg-white text-gray-900 font-bold shadow-2xs' 
-                      : 'text-gray-500 hover:text-gray-800')"
+                      ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-zinc-100 font-bold shadow-2xs' 
+                      : 'text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200')"
                   title="Analyze only the currently active chapter"
                 >
                   Active Chapter
@@ -113,8 +113,8 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
                   (click)="analysisScope.set('document')"
                   [class]="'px-3 py-1 rounded-lg transition-all ' + 
                     (analysisScope() === 'document' 
-                      ? 'bg-white text-gray-900 font-bold shadow-2xs' 
-                      : 'text-gray-500 hover:text-gray-800')"
+                      ? 'bg-white dark:bg-zinc-700 text-gray-900 dark:text-zinc-100 font-bold shadow-2xs' 
+                      : 'text-gray-500 dark:text-zinc-400 hover:text-gray-800 dark:hover:text-zinc-200')"
                   title="Analyze full aggregated manuscript"
                 >
                   Entire Manuscript
@@ -123,10 +123,10 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
             </div>
 
             <!-- Intended Target Audience Selector -->
-            <div class="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 space-y-2.5">
+            <div class="bg-slate-50 dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700 rounded-xl p-3.5 space-y-2.5">
               <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <label for="audienceSelect" class="text-xs font-bold text-gray-800 flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600">
+                <label for="audienceSelect" class="text-xs font-bold text-gray-800 dark:text-zinc-200 flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-indigo-600 dark:text-indigo-400">
                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
                     <circle cx="9" cy="7" r="4"/>
                     <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
@@ -140,7 +140,7 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
                     id="audienceSelect"
                     [value]="selectedAudienceId()"
                     (change)="onAudienceChange($event)"
-                    class="bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-2xs cursor-pointer"
+                    class="bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-600 rounded-lg px-2.5 py-1 text-xs font-semibold text-gray-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-purple-500 shadow-2xs cursor-pointer"
                   >
                     @for (profile of audienceProfiles; track profile.id) {
                       <option [value]="profile.id">
@@ -152,13 +152,13 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
               </div>
 
               <!-- Active Profile Benchmark Info -->
-              <div class="text-[11px] text-gray-600 flex flex-wrap items-center justify-between gap-y-1 gap-x-3 pt-1 border-t border-slate-200/60">
-                <span class="text-gray-500">
-                  <strong class="text-gray-700 font-semibold">Benchmark:</strong> {{ currentAudienceProfile().benchmarkExamples }}
+              <div class="text-[11px] text-gray-600 dark:text-zinc-400 flex flex-wrap items-center justify-between gap-y-1 gap-x-3 pt-1 border-t border-slate-200/60 dark:border-zinc-700">
+                <span class="text-gray-500 dark:text-zinc-400">
+                  <strong class="text-gray-700 dark:text-zinc-300 font-semibold">Benchmark:</strong> {{ currentAudienceProfile().benchmarkExamples }}
                 </span>
-                <span class="text-gray-500">
-                  <strong class="text-gray-700 font-semibold">Target Ease:</strong> {{ currentAudienceProfile().targetFleschMin }}–{{ currentAudienceProfile().targetFleschMax }} Flesch · 
-                  <strong class="text-gray-700 font-semibold">Pacing:</strong> {{ currentAudienceProfile().recommendedSentenceLength }}
+                <span class="text-gray-500 dark:text-zinc-400">
+                  <strong class="text-gray-700 dark:text-zinc-300 font-semibold">Target Ease:</strong> {{ currentAudienceProfile().targetFleschMin }}–{{ currentAudienceProfile().targetFleschMax }} Flesch · 
+                  <strong class="text-gray-700 dark:text-zinc-300 font-semibold">Pacing:</strong> {{ currentAudienceProfile().recommendedSentenceLength }}
                 </span>
               </div>
             </div>
@@ -211,38 +211,38 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
               
               <!-- Card 1: Flesch-Kincaid Grade Level -->
-              <div class="bg-white p-4 rounded-xl border border-gray-200/90 shadow-2xs flex flex-col justify-between">
+              <div class="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-gray-200/90 dark:border-zinc-700/80 shadow-2xs flex flex-col justify-between">
                 <div class="flex items-start justify-between">
                   <div>
-                    <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Flesch-Kincaid Grade</span>
-                    <span class="text-xs text-gray-400">US Educational Grade Equivalent</span>
+                    <span class="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider block">Flesch-Kincaid Grade</span>
+                    <span class="text-xs text-gray-400 dark:text-zinc-500">US Educational Grade Equivalent</span>
                   </div>
-                  <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                     FKGL Score
                   </span>
                 </div>
 
                 <div class="my-3 flex items-baseline gap-2">
-                  <span class="text-3xl font-extrabold text-purple-900 tracking-tight">
+                  <span class="text-3xl font-extrabold text-purple-900 dark:text-purple-300 tracking-tight">
                     Grade {{ currentMetrics().fleschKincaidGradeLevel }}
                   </span>
-                  <span class="text-xs font-semibold text-gray-600">
+                  <span class="text-xs font-semibold text-gray-600 dark:text-zinc-400">
                     ({{ currentMetrics().gradeLevelEquivalent }})
                   </span>
                 </div>
 
-                <div class="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+                <div class="pt-2 border-t border-gray-100 dark:border-zinc-700 flex items-center justify-between text-[11px] text-gray-500 dark:text-zinc-400">
                   <span>Typical Reader Age:</span>
-                  <span class="font-bold text-gray-800">{{ currentMetrics().typicalAgeRange }}</span>
+                  <span class="font-bold text-gray-800 dark:text-zinc-200">{{ currentMetrics().typicalAgeRange }}</span>
                 </div>
               </div>
 
               <!-- Card 2: Flesch Reading Ease -->
-              <div class="bg-white p-4 rounded-xl border border-gray-200/90 shadow-2xs flex flex-col justify-between">
+              <div class="bg-white dark:bg-zinc-800 p-4 rounded-xl border border-gray-200/90 dark:border-zinc-700/80 shadow-2xs flex flex-col justify-between">
                 <div class="flex items-start justify-between">
                   <div>
-                    <span class="text-[11px] font-bold text-gray-500 uppercase tracking-wider block">Flesch Reading Ease</span>
-                    <span class="text-xs text-gray-400">0 to 100 Scale (Higher = Easier to Read)</span>
+                    <span class="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider block">Flesch Reading Ease</span>
+                    <span class="text-xs text-gray-400 dark:text-zinc-500">0 to 100 Scale (Higher = Easier to Read)</span>
                   </div>
                   <span [class]="'px-2 py-0.5 rounded-md text-[10px] font-bold border ' + currentMetrics().readingEaseColor">
                     {{ currentMetrics().readingEaseLabel }}
@@ -251,16 +251,16 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
 
                 <div class="my-2.5">
                   <div class="flex items-baseline justify-between mb-1.5">
-                    <span class="text-3xl font-extrabold text-gray-900 tracking-tight">
-                      {{ currentMetrics().fleschReadingEase }} <span class="text-base font-normal text-gray-400">/ 100</span>
+                    <span class="text-3xl font-extrabold text-gray-900 dark:text-zinc-100 tracking-tight">
+                      {{ currentMetrics().fleschReadingEase }} <span class="text-base font-normal text-gray-400 dark:text-zinc-500">/ 100</span>
                     </span>
-                    <span class="text-xs font-semibold text-gray-500">
+                    <span class="text-xs font-semibold text-gray-500 dark:text-zinc-400">
                       {{ currentMetrics().fleschReadingEase >= 60 ? 'Accessible' : 'Dense' }}
                     </span>
                   </div>
 
                   <!-- Meter bar -->
-                  <div class="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden flex">
+                  <div class="w-full bg-gray-100 dark:bg-zinc-700 rounded-full h-2.5 overflow-hidden flex">
                     <div 
                       class="h-full rounded-full transition-all duration-300"
                       [style.width.%]="currentMetrics().fleschReadingEase"
@@ -269,9 +269,9 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
                   </div>
                 </div>
 
-                <div class="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+                <div class="pt-2 border-t border-gray-100 dark:border-zinc-700 flex items-center justify-between text-[11px] text-gray-500 dark:text-zinc-400">
                   <span>Target Range for {{ currentAudienceProfile().shortLabel }}:</span>
-                  <span class="font-bold text-gray-800">{{ currentAudienceProfile().targetFleschMin }}–{{ currentAudienceProfile().targetFleschMax }}</span>
+                  <span class="font-bold text-gray-800 dark:text-zinc-200">{{ currentAudienceProfile().targetFleschMin }}–{{ currentAudienceProfile().targetFleschMax }}</span>
                 </div>
               </div>
 
@@ -279,68 +279,68 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
 
             <!-- Detailed Quantitative Metrics Grid -->
             <div class="space-y-2">
-              <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500 block">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-zinc-400 block">
                 Quantitative Linguistic Breakdown
               </span>
 
               <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 text-center">
                 
-                <div class="bg-gray-50 border border-gray-200/80 p-2.5 rounded-xl">
-                  <span class="text-[10px] text-gray-500 font-medium block">Avg Sentence</span>
-                  <span class="text-base font-bold text-gray-900 mt-0.5 block">
+                <div class="bg-gray-50 dark:bg-zinc-800/80 border border-gray-200/80 dark:border-zinc-700 p-2.5 rounded-xl">
+                  <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-medium block">Avg Sentence</span>
+                  <span class="text-base font-bold text-gray-900 dark:text-zinc-100 mt-0.5 block">
                     {{ currentMetrics().avgWordsPerSentence }}
                   </span>
-                  <span class="text-[9px] text-gray-400">words/sentence</span>
+                  <span class="text-[9px] text-gray-400 dark:text-zinc-500">words/sentence</span>
                 </div>
 
-                <div class="bg-gray-50 border border-gray-200/80 p-2.5 rounded-xl">
-                  <span class="text-[10px] text-gray-500 font-medium block">Avg Word</span>
-                  <span class="text-base font-bold text-gray-900 mt-0.5 block">
+                <div class="bg-gray-50 dark:bg-zinc-800/80 border border-gray-200/80 dark:border-zinc-700 p-2.5 rounded-xl">
+                  <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-medium block">Avg Word</span>
+                  <span class="text-base font-bold text-gray-900 dark:text-zinc-100 mt-0.5 block">
                     {{ currentMetrics().avgSyllablesPerWord }}
                   </span>
-                  <span class="text-[9px] text-gray-400">syllables/word</span>
+                  <span class="text-[9px] text-gray-400 dark:text-zinc-500">syllables/word</span>
                 </div>
 
-                <div class="bg-gray-50 border border-gray-200/80 p-2.5 rounded-xl">
-                  <span class="text-[10px] text-gray-500 font-medium block">Complex Words</span>
-                  <span class="text-base font-bold text-gray-900 mt-0.5 block">
+                <div class="bg-gray-50 dark:bg-zinc-800/80 border border-gray-200/80 dark:border-zinc-700 p-2.5 rounded-xl">
+                  <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-medium block">Complex Words</span>
+                  <span class="text-base font-bold text-gray-900 dark:text-zinc-100 mt-0.5 block">
                     {{ currentMetrics().complexWordPercentage }}%
                   </span>
-                  <span class="text-[9px] text-gray-400">3+ syllables</span>
+                  <span class="text-[9px] text-gray-400 dark:text-zinc-500">3+ syllables</span>
                 </div>
 
-                <div class="bg-gray-50 border border-gray-200/80 p-2.5 rounded-xl" title="Gunning Fog Index: Estimates years of formal education needed">
-                  <span class="text-[10px] text-gray-500 font-medium block">Gunning Fog</span>
-                  <span class="text-base font-bold text-indigo-900 mt-0.5 block">
+                <div class="bg-gray-50 dark:bg-zinc-800/80 border border-gray-200/80 dark:border-zinc-700 p-2.5 rounded-xl" title="Gunning Fog Index: Estimates years of formal education needed">
+                  <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-medium block">Gunning Fog</span>
+                  <span class="text-base font-bold text-indigo-900 dark:text-indigo-300 mt-0.5 block">
                     {{ currentMetrics().gunningFogIndex }}
                   </span>
-                  <span class="text-[9px] text-indigo-500 font-medium">Fog Index</span>
+                  <span class="text-[9px] text-indigo-500 dark:text-indigo-400 font-medium">Fog Index</span>
                 </div>
 
-                <div class="bg-gray-50 border border-gray-200/80 p-2.5 rounded-xl" title="Coleman-Liau Index: Character-based readability index">
-                  <span class="text-[10px] text-gray-500 font-medium block">Coleman-Liau</span>
-                  <span class="text-base font-bold text-indigo-900 mt-0.5 block">
+                <div class="bg-gray-50 dark:bg-zinc-800/80 border border-gray-200/80 dark:border-zinc-700 p-2.5 rounded-xl" title="Coleman-Liau Index: Character-based readability index">
+                  <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-medium block">Coleman-Liau</span>
+                  <span class="text-base font-bold text-indigo-900 dark:text-indigo-300 mt-0.5 block">
                     {{ currentMetrics().colemanLiauIndex }}
                   </span>
-                  <span class="text-[9px] text-indigo-500 font-medium">CLI Index</span>
+                  <span class="text-[9px] text-indigo-500 dark:text-indigo-400 font-medium">CLI Index</span>
                 </div>
 
-                <div class="bg-gray-50 border border-gray-200/80 p-2.5 rounded-xl" title="Automated Readability Index">
-                  <span class="text-[10px] text-gray-500 font-medium block">Auto Index (ARI)</span>
-                  <span class="text-base font-bold text-indigo-900 mt-0.5 block">
+                <div class="bg-gray-50 dark:bg-zinc-800/80 border border-gray-200/80 dark:border-zinc-700 p-2.5 rounded-xl" title="Automated Readability Index">
+                  <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-medium block">Auto Index (ARI)</span>
+                  <span class="text-base font-bold text-indigo-900 dark:text-indigo-300 mt-0.5 block">
                     {{ currentMetrics().automatedReadabilityIndex }}
                   </span>
-                  <span class="text-[9px] text-indigo-500 font-medium">ARI Score</span>
+                  <span class="text-[9px] text-indigo-500 dark:text-indigo-400 font-medium">ARI Score</span>
                 </div>
 
               </div>
             </div>
 
             <!-- Sentence Length Cadence Distribution -->
-            <div class="bg-gray-50/70 border border-gray-200/80 rounded-xl p-3.5 space-y-2">
+            <div class="bg-gray-50/70 dark:bg-zinc-800/70 border border-gray-200/80 dark:border-zinc-700 rounded-xl p-3.5 space-y-2">
               <div class="flex items-center justify-between text-xs">
-                <span class="font-bold text-gray-700">Sentence Length Rhythm & Flow</span>
-                <span class="text-gray-400 text-[11px]">{{ currentMetrics().sentenceCount }} total sentences detected</span>
+                <span class="font-bold text-gray-700 dark:text-zinc-200">Sentence Length Rhythm & Flow</span>
+                <span class="text-gray-400 dark:text-zinc-500 text-[11px]">{{ currentMetrics().sentenceCount }} total sentences detected</span>
               </div>
 
               <!-- Multi-color distribution bar -->
@@ -380,10 +380,10 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
 
               <!-- Expandable Longest Sentences Inspector -->
               @if (currentMetrics().longestSentences.length > 0) {
-                <div class="pt-2 border-t border-gray-200/80">
+                <div class="pt-2 border-t border-gray-200/80 dark:border-zinc-700">
                   <button 
                     (click)="showSentenceInspector.update(v => !v)"
-                    class="text-[11px] font-bold text-purple-700 hover:text-purple-900 flex items-center gap-1 transition-colors"
+                    class="text-[11px] font-bold text-purple-700 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-300 flex items-center gap-1 transition-colors"
                   >
                     <span>{{ showSentenceInspector() ? 'Hide' : 'Inspect' }} Longest / Most Complex Sentences</span>
                     <svg 
@@ -406,14 +406,14 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
                   @if (showSentenceInspector()) {
                     <div class="mt-2 space-y-2 animate-in fade-in duration-150">
                       @for (s of currentMetrics().longestSentences; track s.text; let i = $index) {
-                        <div class="bg-white p-2.5 rounded-lg border border-gray-200 text-xs shadow-2xs">
+                        <div class="bg-white dark:bg-zinc-800 p-2.5 rounded-lg border border-gray-200 dark:border-zinc-700 text-xs shadow-2xs">
                           <div class="flex items-center justify-between mb-1">
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-purple-700">Sentence #{{ i + 1 }}</span>
-                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">Sentence #{{ i + 1 }}</span>
+                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                               {{ s.wordCount }} words
                             </span>
                           </div>
-                          <p class="text-gray-700 italic font-serif leading-relaxed">
+                          <p class="text-gray-700 dark:text-zinc-200 italic font-serif leading-relaxed">
                             "{{ s.text }}"
                           </p>
                         </div>
@@ -428,18 +428,18 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
           </div>
 
           <!-- Historical Word Count Line Chart Container -->
-          <div class="border border-gray-100 rounded-xl p-4 bg-white shadow-sm space-y-3">
+          <div class="border border-gray-100 dark:border-zinc-800 rounded-xl p-4 bg-white dark:bg-zinc-800/50 shadow-sm space-y-3">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-600"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-200 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-purple-600 dark:text-purple-400"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                   Historical Word Count Over Time
                 </h3>
-                <p class="text-[11px] text-gray-400 mt-0.5">Visual progression of document length across writing sessions</p>
+                <p class="text-[11px] text-gray-400 dark:text-zinc-500 mt-0.5">Visual progression of document length across writing sessions</p>
               </div>
               <button 
                 (click)="recordSnapshot()"
-                class="px-2.5 py-1 text-[11px] font-medium rounded-md bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition-colors flex items-center gap-1.5"
+                class="px-2.5 py-1 text-[11px] font-medium rounded-md bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 transition-colors flex items-center gap-1.5"
                 title="Record current word count point"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
@@ -448,7 +448,7 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
             </div>
 
             <!-- SVG Line Chart Canvas -->
-            <div class="relative w-full h-44 bg-gradient-to-b from-gray-50/70 to-white rounded-lg border border-gray-100 p-2 overflow-hidden flex flex-col justify-end">
+            <div class="relative w-full h-44 bg-gradient-to-b from-gray-50/70 dark:from-zinc-800/80 to-white dark:to-zinc-850 rounded-lg border border-gray-100 dark:border-zinc-700 p-2 overflow-hidden flex flex-col justify-end">
               @if (chartPoints().length > 1) {
                 <svg class="w-full h-full overflow-visible" viewBox="0 0 500 130" preserveAspectRatio="none">
                   <defs>
@@ -459,9 +459,9 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
                   </defs>
 
                   <!-- Horizontal Grid Lines -->
-                  <line x1="0" y1="20" x2="500" y2="20" stroke="#f3f4f6" stroke-width="1"/>
-                  <line x1="0" y1="65" x2="500" y2="65" stroke="#f3f4f6" stroke-width="1"/>
-                  <line x1="0" y1="110" x2="500" y2="110" stroke="#f3f4f6" stroke-width="1"/>
+                  <line x1="0" y1="20" x2="500" y2="20" stroke="#f3f4f6" class="dark:stroke-zinc-800" stroke-width="1"/>
+                  <line x1="0" y1="65" x2="500" y2="65" stroke="#f3f4f6" class="dark:stroke-zinc-800" stroke-width="1"/>
+                  <line x1="0" y1="110" x2="500" y2="110" stroke="#f3f4f6" class="dark:stroke-zinc-800" stroke-width="1"/>
 
                   <!-- Area Path -->
                   <polygon [attr.points]="chartAreaPoints()" fill="url(#wordCountGradient)"/>
@@ -482,7 +482,7 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
                       [attr.cx]="pt.x"
                       [attr.cy]="pt.y"
                       r="4"
-                      class="fill-white stroke-purple-600 stroke-2 hover:r-6 cursor-pointer transition-all"
+                      class="fill-white dark:fill-zinc-900 stroke-purple-600 stroke-2 hover:r-6 cursor-pointer transition-all"
                       (mouseenter)="hoveredPoint.set(pt)"
                       (mouseleave)="hoveredPoint.set(null)"
                     />
@@ -499,14 +499,14 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
                   </div>
                 }
               } @else {
-                <div class="h-full flex items-center justify-center text-xs text-gray-400">
+                <div class="h-full flex items-center justify-center text-xs text-gray-400 dark:text-zinc-500">
                   Record more checkpoints as you write to populate trend analysis.
                 </div>
               }
             </div>
 
             <!-- X-Axis Labels -->
-            <div class="flex justify-between text-[10px] text-gray-400 px-1">
+            <div class="flex justify-between text-[10px] text-gray-400 dark:text-zinc-500 px-1">
               <span>Start of Tracked Sessions</span>
               <span>Recent Output</span>
               <span>Current Checkpoint</span>
@@ -514,18 +514,18 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
           </div>
 
           <!-- Productivity Goal Target Controls -->
-          <div class="border border-gray-100 rounded-xl p-4 bg-gray-50/50 space-y-4">
-            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          <div class="border border-gray-100 dark:border-zinc-800 rounded-xl p-4 bg-gray-50/50 dark:bg-zinc-800/40 space-y-4">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-zinc-200 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600 dark:text-emerald-400"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
               Set Writing Productivity Targets
             </h3>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <!-- Document Target -->
-              <div class="bg-white p-3.5 rounded-lg border border-gray-200/80 shadow-sm space-y-2">
-                <div class="flex justify-between items-center text-xs font-medium text-gray-800">
+              <div class="bg-white dark:bg-zinc-800 p-3.5 rounded-lg border border-gray-200/80 dark:border-zinc-700 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-xs font-medium text-gray-800 dark:text-zinc-200">
                   <span>Document Target</span>
-                  <span class="font-bold text-purple-700">{{ docTargetInput }} words</span>
+                  <span class="font-bold text-purple-700 dark:text-purple-400">{{ docTargetInput }} words</span>
                 </div>
                 <input
                   type="range"
@@ -534,22 +534,22 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
                   step="500"
                   [(ngModel)]="docTargetInput"
                   (ngModelChange)="applyGoals()"
-                  class="w-full accent-purple-600 h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                  class="w-full accent-purple-600 h-1.5 bg-gray-200 dark:bg-zinc-700 rounded-lg cursor-pointer"
                 />
-                <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-2">
+                <div class="w-full bg-gray-100 dark:bg-zinc-700 rounded-full h-2 overflow-hidden mt-2">
                   <div class="bg-purple-600 h-full rounded-full transition-all" [style.width.%]="blockService.documentProgress()"></div>
                 </div>
-                <div class="flex justify-between text-[10px] text-gray-400">
+                <div class="flex justify-between text-[10px] text-gray-400 dark:text-zinc-500">
                   <span>{{ blockService.wordCount() }} written</span>
                   <span>{{ blockService.documentProgress() }}% achieved</span>
                 </div>
               </div>
 
               <!-- Daily Target -->
-              <div class="bg-white p-3.5 rounded-lg border border-gray-200/80 shadow-sm space-y-2">
-                <div class="flex justify-between items-center text-xs font-medium text-gray-800">
+              <div class="bg-white dark:bg-zinc-800 p-3.5 rounded-lg border border-gray-200/80 dark:border-zinc-700 shadow-sm space-y-2">
+                <div class="flex justify-between items-center text-xs font-medium text-gray-800 dark:text-zinc-200">
                   <span>Daily Target</span>
-                  <span class="font-bold text-emerald-700">{{ dailyTargetInput }} words/day</span>
+                  <span class="font-bold text-emerald-700 dark:text-emerald-400">{{ dailyTargetInput }} words/day</span>
                 </div>
                 <input
                   type="range"
@@ -558,12 +558,12 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
                   step="100"
                   [(ngModel)]="dailyTargetInput"
                   (ngModelChange)="applyGoals()"
-                  class="w-full accent-emerald-600 h-1.5 bg-gray-200 rounded-lg cursor-pointer"
+                  class="w-full accent-emerald-600 h-1.5 bg-gray-200 dark:bg-zinc-700 rounded-lg cursor-pointer"
                 />
-                <div class="w-full bg-gray-100 rounded-full h-2 overflow-hidden mt-2">
+                <div class="w-full bg-gray-100 dark:bg-zinc-700 rounded-full h-2 overflow-hidden mt-2">
                   <div class="bg-emerald-600 h-full rounded-full transition-all" [style.width.%]="blockService.dailyProgress()"></div>
                 </div>
-                <div class="flex justify-between text-[10px] text-gray-400">
+                <div class="flex justify-between text-[10px] text-gray-400 dark:text-zinc-500">
                   <span>Streak: {{ blockService.currentStreak() }} day(s)</span>
                   <span>{{ blockService.dailyProgress() }}% today</span>
                 </div>
@@ -573,14 +573,14 @@ import { WordCountHistoryPoint } from '../../services/storage.service';
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-3.5 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-2">
-          <div class="text-[11px] text-gray-500 flex items-center gap-1.5">
+        <div class="px-6 py-3.5 bg-gray-50 dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between gap-2">
+          <div class="text-[11px] text-gray-500 dark:text-zinc-400 flex items-center gap-1.5">
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
             <span>Real-time analysis active across {{ blockService.chapters().length }} chapters</span>
           </div>
-          <button
-            (click)="close.emit()"
-            class="px-4 py-2 text-xs font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+          <button 
+            (click)="close.emit()" 
+            class="px-4 py-2 bg-gray-900 dark:bg-zinc-100 hover:bg-black dark:hover:bg-white text-white dark:text-zinc-900 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
           >
             Done
           </button>

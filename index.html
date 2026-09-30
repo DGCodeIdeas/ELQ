@@ -12,6 +12,7 @@
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -42,7 +43,21 @@
           }
         }
       }
-    }
+    };
+    // Immediate anti-flash theme init
+    (function() {
+      try {
+        var saved = localStorage.getItem('eloqui_theme');
+        var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (saved === 'dark' || (!saved && systemDark) || (saved === 'system' && systemDark)) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.style.colorScheme = 'dark';
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.style.colorScheme = 'light';
+        }
+      } catch(e) {}
+    })();
   </script>
   <style>
     /* Custom scrollbar for minimalism */
@@ -60,10 +75,19 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #d1d5db;
     }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #3f3f46;
+    }
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: #52525b;
+    }
     .empty-block:empty:before {
       content: 'Type "/" for commands...';
       color: #9ca3af;
       pointer-events: none;
+    }
+    .dark .empty-block:empty:before {
+      color: #71717a;
     }
 
     /* Hide scrollbar for Chrome, Safari and Opera */
@@ -242,7 +266,7 @@
 }
 </script>
 </head>
-<body class="bg-[#fcfcfc] text-gray-900 h-screen w-screen overflow-hidden">
+<body class="bg-[#fcfcfc] dark:bg-zinc-950 text-gray-900 dark:text-zinc-100 h-screen w-screen overflow-hidden transition-colors duration-200">
   <app-root></app-root>
 </body>
 </html>

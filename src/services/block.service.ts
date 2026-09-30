@@ -988,4 +988,60 @@ export class BlockService {
       a.click();
       URL.revokeObjectURL(url);
   }
+
+  /**
+   * Restores vault documents from a backup payload
+   */
+  async restoreVault(restoredDocs: Document[], mode: 'merge' | 'replace'): Promise<void> {
+    if (!restoredDocs || restoredDocs.length === 0) return;
+
+    if (mode === 'replace') {
+      // Delete existing documents
+      const current = this.documents();
+      for (const d of current) {
+        await this.storage.deleteDocument(d.id);
+      }
+      // Save all restored documents
+      for (const d of restoredDocs) {
+        await this.storage.saveDocument(d);
+      }
+      this.documents.set(restoredDocs);
+      if (restoredDocs.length > 0) {
+        this.selectDocument(restoredDocs[0].id);
+      }
+    } else {
+      // Merge mode
+      const existing = [...this.documents()];
+      const existingMap = new Map(existing.map(d => [d.id, d]));
+
+      for (const d of restoredDocs) {
+        if (existingMap.has(d.id)) {
+          // If already exists, generate a new ID or replace if newer
+          const existingDoc = existingMap.get(d.id)!;
+          if (d.lastModified > existingDoc.lastModified) {
+            existingMap.set(d.id, d);
+            await this.storage.saveDocument(d);
+          } else {
+            // Keep local newer, or add as copy if titles differ
+            const copyDoc: Document = {
+              ...d,
+              id: crypto.randomUUID(),
+              title: `${d.title} (Restored Copy)`
+            };
+            existingMap.set(copyDoc.id, copyDoc);
+            await this.storage.saveDocument(copyDoc);
+          }
+        } else {
+          existingMap.set(d.id, d);
+          await this.storage.saveDocument(d);
+        }
+      }
+
+      const merged = Array.from(existingMap.values());
+      this.documents.set(merged);
+      if (restoredDocs.length > 0) {
+        this.selectDocument(restoredDocs[0].id);
+      }
+    }
+  }
 }

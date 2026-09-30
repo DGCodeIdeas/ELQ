@@ -26,38 +26,40 @@ import { marked } from 'marked';
     ::ng-deep .chat-markdown h1 { font-size: 1.5em; font-weight: 700; margin-top: 1em; margin-bottom: 0.5em; letter-spacing: -0.025em; }
     ::ng-deep .chat-markdown h2 { font-size: 1.25em; font-weight: 600; margin-top: 0.8em; margin-bottom: 0.4em; letter-spacing: -0.015em; }
     ::ng-deep .chat-markdown p { margin-bottom: 1em; line-height: 1.75; color: #374151; }
+    .dark ::ng-deep .chat-markdown p { color: #d4d4d8; }
+    .dark ::ng-deep .chat-markdown h1, .dark ::ng-deep .chat-markdown h2, .dark ::ng-deep .chat-markdown strong { color: #f4f4f5; }
     ::ng-deep .chat-markdown ul, ::ng-deep .chat-markdown ol { margin-bottom: 1em; padding-left: 1.25em; }
     ::ng-deep .chat-markdown li { margin-bottom: 0.25em; }
   `],
   template: `
-    <div class="h-full flex flex-col bg-white font-sans w-full relative">
+    <div class="h-full flex flex-col bg-white dark:bg-zinc-900 text-gray-900 dark:text-zinc-100 font-sans w-full relative">
       
       @if (blockService.isLoading()) {
          <!-- Skeleton -->
-         <div class="animate-pulse flex flex-col h-full bg-white p-6 gap-4">
-             <div class="h-8 bg-gray-100 rounded w-1/3"></div>
-             <div class="h-32 bg-gray-100 rounded w-full"></div>
+         <div class="animate-pulse flex flex-col h-full bg-white dark:bg-zinc-900 p-6 gap-4">
+             <div class="h-8 bg-gray-100 dark:bg-zinc-800 rounded w-1/3"></div>
+             <div class="h-32 bg-gray-100 dark:bg-zinc-800 rounded w-full"></div>
          </div>
       } @else {
       <!-- Header -->
-      <div class="px-6 py-3 border-b border-gray-100 bg-white/95 backdrop-blur-sm shrink-0 z-20 flex flex-col gap-3">
+      <div class="px-6 py-3 border-b border-gray-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm shrink-0 z-20 flex flex-col gap-3">
         <div class="flex justify-between items-center">
            <div class="flex items-center gap-2">
-              <button (click)="toggleHistory()" class="p-2 -ml-2 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors relative" title="History">
+              <button (click)="toggleHistory()" class="p-2 -ml-2 text-gray-400 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded-lg transition-colors relative" title="History">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/></svg>
               </button>
               <div class="flex items-center gap-1.5">
                 <div class="w-4 h-4 rounded bg-purple-600 text-white text-[9px] font-bold flex items-center justify-center">E</div>
-                <h3 class="font-bold text-gray-900 tracking-tight text-sm">Eloqui AI</h3>
+                <h3 class="font-bold text-gray-900 dark:text-zinc-100 tracking-tight text-sm">Eloqui AI</h3>
               </div>
            </div>
 
            <!-- Action buttons: New Chat + Collapse Sidebar -->
            <div class="flex items-center gap-1">
-             <button (click)="newChat()" class="p-2 text-gray-400 hover:text-brand-600 hover:bg-gray-50 rounded-lg transition-colors" title="New Chat">
+             <button (click)="newChat()" class="p-2 text-gray-400 dark:text-zinc-400 hover:text-brand-600 dark:hover:text-purple-400 hover:bg-gray-50 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="New Chat">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
              </button>
-             <button (click)="closeChat.emit()" class="p-2 -mr-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors" title="Collapse AI Sidebar">
+             <button (click)="closeChat.emit()" class="p-2 -mr-2 text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-lg transition-colors" title="Collapse AI Sidebar">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/><path d="m8 9 3 3-3 3"/></svg>
              </button>
            </div>
@@ -68,14 +70,14 @@ import { marked } from 'marked';
           <button 
             (click)="setMode('chapter')" 
             [class]="'text-xs font-medium pb-2 border-b-2 transition-all whitespace-nowrap ' + 
-            (mode() === 'chapter' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-400 hover:text-gray-600')">
+            (mode() === 'chapter' ? 'border-gray-900 dark:border-zinc-100 text-gray-900 dark:text-zinc-100' : 'border-transparent text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300')">
             Chapter
           </button>
           
           <button 
             (click)="setMode('book')" 
             [class]="'text-xs font-medium pb-2 border-b-2 transition-all flex items-center gap-1 whitespace-nowrap ' + 
-            (mode() === 'book' ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-400 hover:text-gray-600')">
+            (mode() === 'book' ? 'border-brand-600 text-brand-600 dark:border-purple-400 dark:text-purple-400' : 'border-transparent text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300')">
             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
             Deep Book
           </button>
@@ -83,21 +85,21 @@ import { marked } from 'marked';
           <button 
             (click)="setMode('uncensored')" 
             [class]="'text-xs font-medium pb-2 border-b-2 transition-all whitespace-nowrap ' + 
-            (mode() === 'uncensored' ? 'border-slate-900 text-slate-900 font-semibold' : 'border-transparent text-gray-400 hover:text-gray-700')">
+            (mode() === 'uncensored' ? 'border-slate-900 dark:border-zinc-100 text-slate-900 dark:text-zinc-100 font-semibold' : 'border-transparent text-gray-400 dark:text-zinc-500 hover:text-gray-700 dark:hover:text-zinc-300')">
             Unfiltered
           </button>
 
           <button 
             (click)="setMode('dictionary')" 
             [class]="'text-xs font-medium pb-2 border-b-2 transition-all whitespace-nowrap ' + 
-            (mode() === 'dictionary' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-400 hover:text-gray-600')">
+            (mode() === 'dictionary' ? 'border-gray-900 dark:border-zinc-100 text-gray-900 dark:text-zinc-100' : 'border-transparent text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300')">
             Dictionary
           </button>
 
           <button 
             (click)="setMode('search')" 
             [class]="'text-xs font-medium pb-2 border-b-2 transition-all whitespace-nowrap ' + 
-            (mode() === 'search' ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-400 hover:text-gray-600')">
+            (mode() === 'search' ? 'border-gray-900 dark:border-zinc-100 text-gray-900 dark:text-zinc-100' : 'border-transparent text-gray-400 dark:text-zinc-500 hover:text-gray-600 dark:hover:text-zinc-300')">
             Web
           </button>
         </div>
@@ -105,31 +107,31 @@ import { marked } from 'marked';
       
       <!-- History List Overlay -->
       @if (showHistory()) {
-        <div class="absolute inset-x-0 top-[105px] bottom-0 bg-white/98 backdrop-blur z-30 flex flex-col animate-in slide-in-from-top-2 fade-in duration-200">
+        <div class="absolute inset-x-0 top-[105px] bottom-0 bg-white/98 dark:bg-zinc-900/98 backdrop-blur z-30 flex flex-col animate-in slide-in-from-top-2 fade-in duration-200 border-t border-gray-100 dark:border-zinc-800">
            <div class="flex-1 overflow-y-auto">
-             <div class="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider sticky top-0 bg-white z-10">
+             <div class="px-6 py-4 text-xs font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wider sticky top-0 bg-white dark:bg-zinc-900 z-10">
                Recent Conversations
              </div>
              @for (session of blockService.sessions(); track session.id) {
-               <div class="group flex items-center border-b border-gray-50 last:border-0 hover:bg-gray-50 pr-4">
+               <div class="group flex items-center border-b border-gray-50 dark:border-zinc-800/80 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/60 pr-4">
                  <button 
                    (click)="selectSession(session.id)"
                    [class]="'flex-1 text-left px-6 py-4 text-sm transition-colors ' + 
-                   (session.id === blockService.activeSessionId() ? 'text-gray-900 font-medium bg-gray-50/50' : 'text-gray-600')">
+                   (session.id === blockService.activeSessionId() ? 'text-gray-900 dark:text-zinc-100 font-medium bg-gray-50/50 dark:bg-zinc-800/50' : 'text-gray-600 dark:text-zinc-400')">
                    <div class="truncate font-medium">{{ session.title }}</div>
-                   <div class="text-[10px] text-gray-400 mt-1 flex items-center gap-1">
+                   <div class="text-[10px] text-gray-400 dark:text-zinc-500 mt-1 flex items-center gap-1">
                       <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                       {{ session.timestamp | date:'MMM d, h:mm a' }}
                    </div>
                  </button>
-                 <button (click)="deleteSession(session.id, $event)" class="p-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete Chat">
+                 <button (click)="deleteSession(session.id, $event)" class="p-2 text-gray-300 dark:text-zinc-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete Chat">
                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                  </button>
                </div>
              }
            </div>
-           <div class="p-4 border-t border-gray-100 bg-gray-50" (click)="toggleHistory()">
-              <button class="w-full py-2 text-center text-sm font-medium text-gray-500 hover:text-gray-900">Close History</button>
+           <div class="p-4 border-t border-gray-100 dark:border-zinc-800 bg-gray-50 dark:bg-zinc-800/50" (click)="toggleHistory()">
+              <button class="w-full py-2 text-center text-sm font-medium text-gray-500 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-100">Close History</button>
            </div>
         </div>
       }
@@ -138,15 +140,15 @@ import { marked } from 'marked';
       <div #scrollContainer class="flex-1 overflow-y-auto p-0 scroll-smooth space-y-0 relative">
         <!-- RAG Progress Indicator -->
         @if (ragService.isIndexing()) {
-             <div class="absolute top-0 inset-x-0 bg-brand-50 border-b border-brand-100 p-2 text-center text-[10px] font-bold text-brand-700 tracking-wide z-10 flex items-center justify-center gap-2">
-                 <svg class="animate-spin h-3 w-3 text-brand-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+             <div class="absolute top-0 inset-x-0 bg-brand-50 dark:bg-purple-950/40 border-b border-brand-100 dark:border-purple-800/40 p-2 text-center text-[10px] font-bold text-brand-700 dark:text-purple-300 tracking-wide z-10 flex items-center justify-center gap-2">
+                 <svg class="animate-spin h-3 w-3 text-brand-600 dark:text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                  Indexing Book for Deep Mode... {{ ragService.progress() }}%
              </div>
         }
 
         @if (mode() !== 'search') {
           <div class="flex justify-center my-6 opacity-0 hover:opacity-100 transition-opacity">
-            <div class="text-[10px] text-gray-300 flex items-center gap-1.5 px-3 py-1 bg-gray-50 rounded-full border border-gray-100">
+            <div class="text-[10px] text-gray-400 dark:text-zinc-500 flex items-center gap-1.5 px-3 py-1 bg-gray-50 dark:bg-zinc-800 rounded-full border border-gray-100 dark:border-zinc-700">
                @if (mode() === 'book') {
                  Deep Analysis (RAG Enabled)
                } @else if (mode() === 'dictionary') {
@@ -162,7 +164,7 @@ import { marked } from 'marked';
         
         @if (messages().length <= 1) {
              <div class="flex flex-col gap-3 px-8 mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-md mx-auto">
-                 <div class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 text-center">
+                 <div class="text-xs font-semibold text-gray-400 dark:text-zinc-500 uppercase tracking-wider mb-2 text-center">
                     @if (mode() === 'book') { Deep Mode Actions } 
                     @else if (mode() === 'dictionary') { Quick Lookups } 
                     @else if (mode() === 'uncensored') { Unfiltered Actions }
@@ -170,36 +172,36 @@ import { marked } from 'marked';
                  </div>
                  
                  @if (mode() === 'book') {
-                    <button (click)="setInput('Summarize the entire plot arc across all chapters.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 hover:border-brand-200 hover:shadow-sm transition-all text-sm text-gray-600 bg-brand-50/30 group">
-                        <span class="font-medium block mb-0.5 group-hover:text-brand-700 text-gray-800">Analyze Full Plot</span>
+                    <button (click)="setInput('Summarize the entire plot arc across all chapters.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 dark:border-zinc-700 hover:border-brand-200 dark:hover:border-purple-600 hover:shadow-sm transition-all text-sm text-gray-600 dark:text-zinc-300 bg-brand-50/30 dark:bg-purple-950/20 group">
+                        <span class="font-medium block mb-0.5 group-hover:text-brand-700 dark:group-hover:text-purple-300 text-gray-800 dark:text-zinc-100">Analyze Full Plot</span>
                         <span class="text-xs opacity-70">Trace the arc across the whole book.</span>
                     </button>
-                    <button (click)="setInput('List all characters and their development.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 hover:border-brand-200 hover:shadow-sm transition-all text-sm text-gray-600 bg-brand-50/30 group">
-                        <span class="font-medium block mb-0.5 group-hover:text-brand-700 text-gray-800">Character Audit</span>
+                    <button (click)="setInput('List all characters and their development.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 dark:border-zinc-700 hover:border-brand-200 dark:hover:border-purple-600 hover:shadow-sm transition-all text-sm text-gray-600 dark:text-zinc-300 bg-brand-50/30 dark:bg-purple-950/20 group">
+                        <span class="font-medium block mb-0.5 group-hover:text-brand-700 dark:group-hover:text-purple-300 text-gray-800 dark:text-zinc-100">Character Audit</span>
                     </button>
                  } @else if (mode() === 'dictionary') {
-                     <button (click)="setInput('Serendipity'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all text-sm text-gray-600 bg-gray-50/50 group">
-                        <span class="font-medium block mb-0.5 group-hover:text-gray-900 text-gray-800">Define "Serendipity"</span>
+                     <button (click)="setInput('Serendipity'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 dark:border-zinc-700 hover:border-gray-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all text-sm text-gray-600 dark:text-zinc-300 bg-gray-50/50 dark:bg-zinc-800/40 group">
+                        <span class="font-medium block mb-0.5 group-hover:text-gray-900 dark:group-hover:text-zinc-100 text-gray-800 dark:text-zinc-100">Define "Serendipity"</span>
                     </button>
-                    <button (click)="setInput('Ephemeral'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all text-sm text-gray-600 bg-gray-50/50 group">
-                        <span class="font-medium block mb-0.5 group-hover:text-gray-900 text-gray-800">Define "Ephemeral"</span>
+                    <button (click)="setInput('Ephemeral'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 dark:border-zinc-700 hover:border-gray-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all text-sm text-gray-600 dark:text-zinc-300 bg-gray-50/50 dark:bg-zinc-800/40 group">
+                        <span class="font-medium block mb-0.5 group-hover:text-gray-900 dark:group-hover:text-zinc-100 text-gray-800 dark:text-zinc-100">Define "Ephemeral"</span>
                     </button>
                  } @else if (mode() === 'uncensored') {
-                    <button (click)="setInput('Draft an objective, tension-filled confrontation scene between characters.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 hover:border-slate-300 hover:shadow-sm transition-all text-sm text-gray-600 bg-slate-50/50 group">
-                        <span class="font-medium block mb-0.5 group-hover:text-slate-900 text-gray-800">Unfiltered Scene Draft</span>
+                    <button (click)="setInput('Draft an objective, tension-filled confrontation scene between characters.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all text-sm text-gray-600 dark:text-zinc-300 bg-slate-50/50 dark:bg-zinc-800/40 group">
+                        <span class="font-medium block mb-0.5 group-hover:text-slate-900 dark:group-hover:text-zinc-100 text-gray-800 dark:text-zinc-100">Unfiltered Scene Draft</span>
                         <span class="text-xs opacity-70">Direct narrative execution with zero lecturing.</span>
                     </button>
-                    <button (click)="setInput('Provide a candid, objective critique of the character motivations and scene tension.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 hover:border-slate-300 hover:shadow-sm transition-all text-sm text-gray-600 bg-slate-50/50 group">
-                        <span class="font-medium block mb-0.5 group-hover:text-slate-900 text-gray-800">Objective Candor Review</span>
+                    <button (click)="setInput('Provide a candid, objective critique of the character motivations and scene tension.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 dark:border-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all text-sm text-gray-600 dark:text-zinc-300 bg-slate-50/50 dark:bg-zinc-800/40 group">
+                        <span class="font-medium block mb-0.5 group-hover:text-slate-900 dark:group-hover:text-zinc-100 text-gray-800 dark:text-zinc-100">Objective Candor Review</span>
                         <span class="text-xs opacity-70">Unbiased critique without tone dilution.</span>
                     </button>
                  } @else {
-                    <button (click)="setInput('Summarize this chapter.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all text-sm text-gray-600 bg-gray-50/50 group">
-                        <span class="font-medium block mb-0.5 group-hover:text-gray-900 text-gray-800">Summarize Chapter</span>
+                    <button (click)="setInput('Summarize this chapter.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 dark:border-zinc-700 hover:border-gray-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all text-sm text-gray-600 dark:text-zinc-300 bg-gray-50/50 dark:bg-zinc-800/40 group">
+                        <span class="font-medium block mb-0.5 group-hover:text-gray-900 dark:group-hover:text-zinc-100 text-gray-800 dark:text-zinc-100">Summarize Chapter</span>
                         <span class="text-xs opacity-70">Get a quick overview.</span>
                     </button>
-                    <button (click)="setInput('Check for tone inconsistencies in this chapter.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 hover:border-gray-300 hover:shadow-sm transition-all text-sm text-gray-600 bg-gray-50/50 group">
-                        <span class="font-medium block mb-0.5 group-hover:text-gray-900 text-gray-800">Critique Tone</span>
+                    <button (click)="setInput('Check for tone inconsistencies in this chapter.'); sendMessage()" class="text-left p-4 rounded-xl border border-gray-100 dark:border-zinc-700 hover:border-gray-300 dark:hover:border-zinc-600 hover:shadow-sm transition-all text-sm text-gray-600 dark:text-zinc-300 bg-gray-50/50 dark:bg-zinc-800/40 group">
+                        <span class="font-medium block mb-0.5 group-hover:text-gray-900 dark:group-hover:text-zinc-100 text-gray-800 dark:text-zinc-100">Critique Tone</span>
                     </button>
                  }
              </div>
@@ -210,14 +212,14 @@ import { marked } from 'marked';
             <div [class]="'flex flex-col group/msg transition-all ' + (msg.role === 'user' ? 'items-end px-6 mb-8 mt-6' : 'w-full mb-2')">
                 <div [class]="'text-sm leading-relaxed overflow-hidden ' + 
                 (msg.role === 'user' 
-                    ? 'bg-gray-100/80 text-gray-800 font-medium rounded-2xl rounded-br-sm px-5 py-3 max-w-[85%]' 
-                    : 'bg-transparent text-gray-800 w-full px-8 py-2 relative')">
+                    ? 'bg-gray-100/80 dark:bg-purple-950/40 text-gray-800 dark:text-purple-100 dark:border dark:border-purple-800/40 font-medium rounded-2xl rounded-br-sm px-5 py-3 max-w-[85%]' 
+                    : 'bg-transparent text-gray-800 dark:text-zinc-200 w-full px-8 py-2 relative')">
                 @if (msg.role === 'model') {
                     <div class="flex items-center gap-2 mb-4 opacity-50 select-none">
-                        <div class="w-4 h-4 rounded-full bg-gray-200 flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/></svg>
+                        <div class="w-4 h-4 rounded-full bg-gray-200 dark:bg-zinc-700 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500 dark:text-zinc-400"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/></svg>
                         </div>
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Scribe</span>
+                        <span class="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-widest">Scribe</span>
                     </div>
                 }
                 <div class="markdown-body chat-markdown" [innerHTML]="renderMarkdown(msg.text)"></div>
@@ -225,10 +227,10 @@ import { marked } from 'marked';
                 
                 @if (msg.role === 'model' && msg.text.length > 0) {
                     <div class="flex flex-wrap gap-2 px-8 mt-2 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-200">
-                        <button (click)="insertText(msg.text, $index)" class="text-[10px] text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full flex items-center gap-1 transition-all">
+                        <button (click)="insertText(msg.text, $index)" class="text-[10px] text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 px-3 py-1.5 rounded-full flex items-center gap-1 transition-all">
                              <span class="opacity-70">Insert</span>
                         </button>
-                        <button (click)="copyText(msg.text, $index)" class="text-[10px] text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-full flex items-center gap-1 transition-all">
+                        <button (click)="copyText(msg.text, $index)" class="text-[10px] text-gray-400 dark:text-zinc-400 hover:text-gray-700 dark:hover:text-zinc-200 bg-gray-50 dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 px-3 py-1.5 rounded-full flex items-center gap-1 transition-all">
                              <span class="opacity-70">Copy</span>
                         </button>
                     </div>
@@ -241,13 +243,13 @@ import { marked } from 'marked';
           <div class="flex justify-start animate-in fade-in duration-300 w-full mb-6">
              <div class="px-8 py-6 w-full">
                <div class="flex items-center gap-2 mb-4">
-                  <div class="w-4 h-4 rounded-full bg-gray-100"></div>
-                  <div class="w-16 h-3 bg-gray-100 rounded"></div>
+                  <div class="w-4 h-4 rounded-full bg-gray-100 dark:bg-zinc-800"></div>
+                  <div class="w-16 h-3 bg-gray-100 dark:bg-zinc-800 rounded"></div>
                </div>
                <div class="space-y-4 animate-pulse max-w-xl">
-                  <div class="h-2 bg-gray-100 rounded w-full"></div>
-                  <div class="h-2 bg-gray-100 rounded w-[90%]"></div>
-                  <div class="h-2 bg-gray-100 rounded w-[95%]"></div>
+                  <div class="h-2 bg-gray-100 dark:bg-zinc-800 rounded w-full"></div>
+                  <div class="h-2 bg-gray-100 dark:bg-zinc-800 rounded w-[90%]"></div>
+                  <div class="h-2 bg-gray-100 dark:bg-zinc-800 rounded w-[95%]"></div>
                </div>
              </div>
           </div>
@@ -257,7 +259,7 @@ import { marked } from 'marked';
       </div>
 
       <!-- Input Area -->
-      <div class="p-6 bg-white shrink-0 pb-[env(safe-area-inset-bottom)] z-20">
+      <div class="p-6 bg-white dark:bg-zinc-900 shrink-0 pb-[env(safe-area-inset-bottom)] z-20">
         <div class="relative group">
           <textarea 
             #inputBox
@@ -266,12 +268,12 @@ import { marked } from 'marked';
             (input)="input.set($any($event.target).value)"
             (keydown.enter)="onEnter($event)"
             [placeholder]="getPlaceholder()"
-            class="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-5 pr-12 py-4 text-sm focus:bg-white focus:ring-1 focus:ring-gray-200 focus:border-gray-300 focus:outline-none placeholder-gray-400 transition-all resize-none max-h-32 leading-relaxed"
+            class="w-full bg-gray-50 dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 rounded-2xl pl-5 pr-12 py-4 text-sm text-gray-900 dark:text-zinc-100 focus:bg-white dark:focus:bg-zinc-850 focus:ring-1 focus:ring-gray-200 dark:focus:ring-zinc-600 focus:border-gray-300 dark:focus:border-zinc-600 focus:outline-none placeholder-gray-400 dark:placeholder-zinc-500 transition-all resize-none max-h-32 leading-relaxed"
           ></textarea>
           <button 
             (click)="sendMessage()"
             [disabled]="!input().trim() || isLoading()"
-            class="absolute right-3 bottom-3 p-1.5 bg-gray-900 text-white rounded-xl hover:bg-black transition-all disabled:opacity-20 disabled:bg-gray-300">
+            class="absolute right-3 bottom-3 p-1.5 bg-gray-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-xl hover:bg-black dark:hover:bg-white transition-all disabled:opacity-20 disabled:bg-gray-300 dark:disabled:bg-zinc-700">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
         </div>

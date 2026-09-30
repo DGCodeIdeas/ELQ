@@ -6,6 +6,7 @@ import { AuthService } from './services/auth.service';
 import { CryptoService } from './services/crypto.service';
 import { ModelService } from './services/model.service';
 import { PrivacyService } from './services/privacy.service';
+import { ThemeService } from './services/theme.service';
 import { EditorComponent } from './components/editor/editor.component';
 import { ChatComponent } from './components/chat/chat.component';
 import { MetricsModalComponent } from './components/metrics-modal/metrics-modal.component';
@@ -14,6 +15,8 @@ import { ByokModalComponent } from './components/byok-modal/byok-modal.component
 import { PrivacyModalComponent } from './components/privacy-modal/privacy-modal.component';
 import { AuthModalComponent } from './components/auth-modal/auth-modal.component';
 import { ExportModalComponent } from './components/export-modal/export-modal.component';
+import { BackupModalComponent } from './components/backup-modal/backup-modal.component';
+import { BackupService } from './services/backup.service';
 
 @Component({
   selector: 'app-root',
@@ -27,7 +30,8 @@ import { ExportModalComponent } from './components/export-modal/export-modal.com
     ByokModalComponent,
     PrivacyModalComponent,
     AuthModalComponent,
-    ExportModalComponent
+    ExportModalComponent,
+    BackupModalComponent
   ],
   templateUrl: './app.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +46,8 @@ export class AppComponent {
   cryptoService = inject(CryptoService);
   modelService = inject(ModelService);
   privacyService = inject(PrivacyService);
+  themeService = inject(ThemeService);
+  backupService = inject(BackupService);
 
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild(EditorComponent) editorComponent!: EditorComponent;
@@ -62,6 +68,7 @@ export class AppComponent {
   showPrivacyModal = signal(false);
   showAuthModal = signal(false);
   showExportModal = signal(false);
+  showBackupModal = signal(false);
 
   toggleToolsMenu() {
     this.showToolsMenu.update(v => !v);
@@ -71,7 +78,7 @@ export class AppComponent {
     this.showToolsMenu.set(false);
   }
 
-  openModal(modal: 'metrics' | 'models' | 'byok' | 'privacy' | 'auth' | 'export') {
+  openModal(modal: 'metrics' | 'models' | 'byok' | 'privacy' | 'auth' | 'export' | 'backup') {
     this.showToolsMenu.set(false);
     this.showMobileMenu.set(false);
     if (modal === 'metrics') this.showMetricsModal.set(true);
@@ -80,6 +87,7 @@ export class AppComponent {
     if (modal === 'privacy') this.showPrivacyModal.set(true);
     if (modal === 'auth') this.showAuthModal.set(true);
     if (modal === 'export') this.showExportModal.set(true);
+    if (modal === 'backup') this.showBackupModal.set(true);
   }
 
   toggleLeftSidebar() {
@@ -108,6 +116,10 @@ export class AppComponent {
 
   handleKeyboardShortcuts(event: KeyboardEvent) {
     if (event.key === 'Escape') {
+      if (this.showBackupModal()) {
+        this.showBackupModal.set(false);
+        return;
+      }
       if (this.showExportModal()) {
         this.showExportModal.set(false);
         return;
@@ -125,6 +137,12 @@ export class AppComponent {
         return;
       }
     }
+    // Ctrl+Shift+B or Cmd+Shift+B opens Backup Hub
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'b' || event.key === 'B')) {
+      event.preventDefault();
+      this.openModal('backup');
+      return;
+    }
     // Ctrl+E or Cmd+E opens Export Manuscript Dialog
     if ((event.ctrlKey || event.metaKey) && (event.key === 'e' || event.key === 'E')) {
       event.preventDefault();
@@ -139,6 +157,11 @@ export class AppComponent {
     if ((event.ctrlKey || event.metaKey) && (event.key === 'j' || event.key === 'J')) {
       event.preventDefault();
       this.toggleRightSidebar();
+    }
+    // Ctrl+Shift+D or Cmd+Shift+D toggles Dark / Light Mode
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'd' || event.key === 'D')) {
+      event.preventDefault();
+      this.themeService.toggleTheme();
     }
   }
 

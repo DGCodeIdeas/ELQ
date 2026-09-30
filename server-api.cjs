@@ -1268,4 +1268,482 @@ apiRouter.post('/ai/embed', async (req, res) => {
   }
 });
 
+// ==========================================
+// REMOTE BACKUP ENDPOINTS (GitHub, S3, WebDAV, Webhooks)
+// ==========================================
+const crypto = require('crypto');
+
+// 1. Connection Test Endpoint
+apiRouter.post('/backup/remote/test-connection', async (req, res) => {
+  try {
+    const { remoteType, config } = req.body;
+    if (!remoteType || !config) {
+      return res.status(400).json({ ok: false, error: 'Missing remoteType or config' });
+    }
+
+    if (remoteType === 'github') {
+      const { token, owner, repo, isGist, gistId } = config;
+      if (!token) return res.status(400).json({ ok: false, error: 'GitHub Personal Access Token is required' });
+      
+      if (isGist) {
+        const url = gistId ? `https://api.github.com/gists/${encodeURIComponent(gistId)}` : 'https://api.github.com/gists?per_page=1';
+        const ghRes = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token.trim()}`,
+            'User-Agent': 'Eloqui-Backup-Engine',
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        if (!ghRes.ok) {
+          const errText = await ghRes.text();
+          return res.status(ghRes.status).json({ ok: false, error: `GitHub Gist error (${ghRes.status}): ${errText}` });
+        }
+        const data = await ghRes.json();
+        return res.json({ ok: true, message: 'GitHub Gist connection verified successfully', details: { id: data.id || 'Gists Accessible' } });
+      } else {
+        if (!owner || !repo) return res.status(400).json({ ok: false, error: 'Repository owner and name are required' });
+        const ghRes = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner.trim())}/${encodeURIComponent(repo.trim())}`, {
+          headers: {
+            'Authorization': `Bearer ${token.trim()}`,
+            'User-Agent': 'Eloqui-Backup-Engine',
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+        if (!ghRes.ok) {
+          const errText = await ghRes.text();
+          return res.status(ghRes.status).json({ ok: false, error: `GitHub Repository error (${ghRes.status}): ${errText}` });
+        }
+        const repoData = await ghRes.json();
+        return res.json({ ok: true, message: `Connected to repository ${repoData.full_name}`, details: { defaultBranch: repoData.default_branch, permissions: repoData.permissions } });
+      }
+    }
+
+    if (remoteType === 'webdav') {
+      const { serverUrl, username, password, token } = config;
+      if (!serverUrl) return res.status(400).json({ ok: false, error: 'WebDAV server URL is required' });
+      
+      const headers = { 'User-Agent': 'Eloqui-Backup-Engine' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token.trim()}`;
+      } else if (username && password) {
+        const credentials = Buffer.from(`${username.trim()}:${password.trim()}`).toString('base64');
+        headers['Authorization'] = `Basic ${credentials}`;
+      }
+
+      // Check server using PROPFIND or OPTIONS
+      const davRes = await fetch(serverUrl.trim(), {
+        method: 'OPTIONS',
+        headers
+      });
+
+      if (davRes.ok || davRes.status === 207 || davRes.status === 405 || davRes.status === 200) {
+        return res.json({ ok: true, message: `WebDAV server connected (HTTP ${davRes.status})` });
+      } else {
+        const errText = await davRes.text();
+        return res.status(davRes.status).json({ ok: false, error: `WebDAV check returned HTTP ${davRes.status}: ${errText.substring(0, 300)}` });
+      }
+    }
+
+    if (remoteType === 's3') {
+      const { endpoint, region = 'us-east-1', bucket, accessKeyId, secretAccessKey } = config;
+      if (!bucket || !accessKeyId || !secretAccessKey) {
+        return res.status(400).json({ ok: false, error: 'Bucket, Access Key ID, and Secret Access Key are required' });
+      }
+      
+      // Perform S3 HEAD bucket or list query
+      const s3Url = buildS3Url(endpoint, bucket, '', region);
+      const urlObj = new URL(s3Url);
+      const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+      const dateStamp = amzDate.substring(0, 8);
+      const payloadHash = crypto.createHash('sha256').update('').digest('hex');
+
+      const canonicalHeaders = `host:${urlObj.host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+      const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
+      const canonicalRequest = `HEAD\n${urlObj.pathname}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+
+      const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+      const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${crypto.createHash('sha256').update(canonicalRequest).digest('hex')}`;
+      const signingKey = getS3SigningKey(secretAccessKey.trim(), dateStamp, region, 's3');
+      const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');
+
+      const authHeader = `AWS4-HMAC-SHA256 Credential=${accessKeyId.trim()}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+      const s3Res = await fetch(s3Url, {
+        method: 'HEAD',
+        headers: {
+          'Host': urlObj.host,
+          'x-amz-content-sha256': payloadHash,
+          'x-amz-date': amzDate,
+          'Authorization': authHeader
+        }
+      });
+
+      if (s3Res.ok || s3Res.status === 200 || s3Res.status === 204) {
+        return res.json({ ok: true, message: `Connected to S3 bucket "${bucket}" successfully!` });
+      } else {
+        return res.status(s3Res.status).json({ ok: false, error: `S3 returned HTTP ${s3Res.status} on bucket check` });
+      }
+    }
+
+    if (remoteType === 'webhook') {
+      const { endpointUrl, method = 'POST', secret } = config;
+      if (!endpointUrl) return res.status(400).json({ ok: false, error: 'Webhook URL is required' });
+
+      const pingBody = JSON.stringify({
+        event: 'eloqui_ping',
+        timestamp: new Date().toISOString(),
+        message: 'Eloqui connection test verification'
+      });
+
+      const headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Eloqui-Backup-Engine',
+        'X-Eloqui-Event': 'ping'
+      };
+
+      if (secret) {
+        const sig = crypto.createHmac('sha256', secret.trim()).update(pingBody).digest('hex');
+        headers['X-Eloqui-Signature'] = `sha256=${sig}`;
+      }
+
+      const whRes = await fetch(endpointUrl.trim(), {
+        method: method.toUpperCase(),
+        headers,
+        body: pingBody
+      });
+
+      if (whRes.ok) {
+        return res.json({ ok: true, message: `Webhook responded with HTTP ${whRes.status} OK` });
+      } else {
+        const errText = await whRes.text();
+        return res.status(whRes.status).json({ ok: false, error: `Webhook returned HTTP ${whRes.status}: ${errText.substring(0, 200)}` });
+      }
+    }
+
+    return res.status(400).json({ ok: false, error: `Unsupported remote type "${remoteType}"` });
+  } catch (err) {
+    console.error('Test connection error:', err);
+    return res.status(500).json({ ok: false, error: err.message || 'Internal connection test failure' });
+  }
+});
+
+// Helper for S3 URL resolution
+function buildS3Url(endpoint, bucket, key, region = 'us-east-1') {
+  const cleanKey = key.replace(/^\/+/, '');
+  if (endpoint && endpoint.trim()) {
+    let cleanEndpoint = endpoint.trim().replace(/\/+$/, '');
+    if (!cleanEndpoint.startsWith('http://') && !cleanEndpoint.startsWith('https://')) {
+      cleanEndpoint = 'https://' + cleanEndpoint;
+    }
+    // Check if endpoint already includes bucket or if path-style
+    const url = new URL(cleanEndpoint);
+    if (url.hostname.includes(bucket)) {
+      return `${cleanEndpoint}/${cleanKey}`;
+    }
+    return `${cleanEndpoint}/${encodeURIComponent(bucket)}/${cleanKey}`;
+  }
+  // Standard AWS S3
+  return `https://${encodeURIComponent(bucket)}.s3.${region}.amazonaws.com/${cleanKey}`;
+}
+
+function getS3SigningKey(key, dateStamp, regionName, serviceName) {
+  const kDate = crypto.createHmac('sha256', 'AWS4' + key).update(dateStamp).digest();
+  const kRegion = crypto.createHmac('sha256', kDate).update(regionName).digest();
+  const kService = crypto.createHmac('sha256', kRegion).update(serviceName).digest();
+  return crypto.createHmac('sha256', kService).update('aws4_request').digest();
+}
+
+// 2. GitHub Remote Upload (Repo or Gist)
+apiRouter.post('/backup/remote/github', async (req, res) => {
+  try {
+    const { token, owner, repo, branch = 'main', path = 'backups', filename, content, commitMessage, isGist, gistId, description } = req.body;
+    if (!token) return res.status(400).json({ ok: false, error: 'GitHub token required' });
+    if (!filename || content === undefined) return res.status(400).json({ ok: false, error: 'Filename and content required' });
+
+    if (isGist) {
+      // Gist Backup
+      const gistPayload = {
+        description: description || `Eloqui Sovereign Vault Backup - ${new Date().toISOString()}`,
+        public: false,
+        files: {
+          [filename]: {
+            content: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+          }
+        }
+      };
+
+      const url = gistId ? `https://api.github.com/gists/${encodeURIComponent(gistId)}` : 'https://api.github.com/gists';
+      const method = gistId ? 'PATCH' : 'POST';
+
+      const ghRes = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${token.trim()}`,
+          'User-Agent': 'Eloqui-Backup-Engine',
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify(gistPayload)
+      });
+
+      if (!ghRes.ok) {
+        const errText = await ghRes.text();
+        return res.status(ghRes.status).json({ ok: false, error: `GitHub Gist error: ${errText}` });
+      }
+
+      const gistData = await ghRes.json();
+      return res.json({
+        ok: true,
+        message: 'Gist backup saved successfully',
+        gistId: gistData.id,
+        htmlUrl: gistData.html_url,
+        filename
+      });
+    } else {
+      // Repository Commit
+      if (!owner || !repo) return res.status(400).json({ ok: false, error: 'Owner and repo required for repo backup' });
+      const cleanPath = path ? path.replace(/^\/+|\/+$/g, '') : 'backups';
+      const filePath = cleanPath ? `${cleanPath}/${filename}` : filename;
+      const apiUrl = `https://api.github.com/repos/${encodeURIComponent(owner.trim())}/${encodeURIComponent(repo.trim())}/contents/${filePath}`;
+
+      const headers = {
+        'Authorization': `Bearer ${token.trim()}`,
+        'User-Agent': 'Eloqui-Backup-Engine',
+        'Accept': 'application/vnd.github.v3+json'
+      };
+
+      // Check if file already exists to obtain its SHA (for update)
+      let sha = undefined;
+      const checkRes = await fetch(`${apiUrl}?ref=${encodeURIComponent(branch.trim())}`, { headers });
+      if (checkRes.ok) {
+        const fileData = await checkRes.json();
+        sha = fileData.sha;
+      }
+
+      // Convert content to base64 if not already
+      let base64Content = '';
+      if (typeof content === 'string') {
+        // If content is already base64 (e.g. for binary ZIP), use as is or buffer
+        if (req.body.isBase64) {
+          base64Content = content;
+        } else {
+          base64Content = Buffer.from(content, 'utf8').toString('base64');
+        }
+      } else {
+        base64Content = Buffer.from(JSON.stringify(content, null, 2), 'utf8').toString('base64');
+      }
+
+      const putBody = {
+        message: commitMessage || `Automated Eloqui backup: ${filename} [${new Date().toISOString()}]`,
+        content: base64Content,
+        branch: branch.trim()
+      };
+      if (sha) {
+        putBody.sha = sha;
+      }
+
+      const putRes = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(putBody)
+      });
+
+      if (!putRes.ok) {
+        const errText = await putRes.text();
+        return res.status(putRes.status).json({ ok: false, error: `GitHub Commit error: ${errText}` });
+      }
+
+      const commitData = await putRes.json();
+      return res.json({
+        ok: true,
+        message: `Committed ${filename} to ${owner}/${repo} on branch ${branch}`,
+        commitSha: commitData.commit?.sha,
+        htmlUrl: commitData.content?.html_url || `https://github.com/${owner}/${repo}/blob/${branch}/${filePath}`,
+        filePath
+      });
+    }
+  } catch (err) {
+    console.error('GitHub backup error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// 3. S3 / S3-Compatible Remote Upload
+apiRouter.post('/backup/remote/s3', async (req, res) => {
+  try {
+    const { endpoint, region = 'us-east-1', bucket, accessKeyId, secretAccessKey, prefix = 'eloqui-backups', filename, content, isBase64, contentType = 'application/json' } = req.body;
+    if (!bucket || !accessKeyId || !secretAccessKey || !filename) {
+      return res.status(400).json({ ok: false, error: 'Missing required S3 credentials, bucket, or filename' });
+    }
+
+    const cleanPrefix = prefix ? prefix.replace(/^\/+|\/+$/g, '') : '';
+    const key = cleanPrefix ? `${cleanPrefix}/${filename}` : filename;
+
+    // Buffer conversion
+    let buffer;
+    if (isBase64) {
+      buffer = Buffer.from(content, 'base64');
+    } else if (typeof content === 'string') {
+      buffer = Buffer.from(content, 'utf8');
+    } else {
+      buffer = Buffer.from(JSON.stringify(content, null, 2), 'utf8');
+    }
+
+    const s3Url = buildS3Url(endpoint, bucket, key, region);
+    const urlObj = new URL(s3Url);
+    const amzDate = new Date().toISOString().replace(/[:-]|\.\d{3}/g, '');
+    const dateStamp = amzDate.substring(0, 8);
+    const payloadHash = crypto.createHash('sha256').update(buffer).digest('hex');
+
+    const canonicalHeaders = `content-length:${buffer.length}\ncontent-type:${contentType}\nhost:${urlObj.host}\nx-amz-content-sha256:${payloadHash}\nx-amz-date:${amzDate}\n`;
+    const signedHeaders = 'content-length;content-type;host;x-amz-content-sha256;x-amz-date';
+    const canonicalRequest = `PUT\n${urlObj.pathname}\n\n${canonicalHeaders}\n${signedHeaders}\n${payloadHash}`;
+
+    const credentialScope = `${dateStamp}/${region}/s3/aws4_request`;
+    const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${credentialScope}\n${crypto.createHash('sha256').update(canonicalRequest).digest('hex')}`;
+    const signingKey = getS3SigningKey(secretAccessKey.trim(), dateStamp, region, 's3');
+    const signature = crypto.createHmac('sha256', signingKey).update(stringToSign).digest('hex');
+
+    const authHeader = `AWS4-HMAC-SHA256 Credential=${accessKeyId.trim()}/${credentialScope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+
+    const s3Res = await fetch(s3Url, {
+      method: 'PUT',
+      headers: {
+        'Host': urlObj.host,
+        'Content-Type': contentType,
+        'Content-Length': buffer.length.toString(),
+        'x-amz-content-sha256': payloadHash,
+        'x-amz-date': amzDate,
+        'Authorization': authHeader
+      },
+      body: buffer
+    });
+
+    if (s3Res.ok || s3Res.status === 200 || s3Res.status === 201) {
+      return res.json({
+        ok: true,
+        message: `Successfully uploaded ${filename} to ${bucket}/${key}`,
+        key,
+        bucket,
+        etag: s3Res.headers.get('etag'),
+        location: s3Url
+      });
+    } else {
+      const errText = await s3Res.text();
+      return res.status(s3Res.status).json({ ok: false, error: `S3 upload failed (${s3Res.status}): ${errText}` });
+    }
+  } catch (err) {
+    console.error('S3 backup error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// 4. WebDAV / Nextcloud Remote Upload
+apiRouter.post('/backup/remote/webdav', async (req, res) => {
+  try {
+    const { serverUrl, username, password, token, path = 'Backups/Eloqui', filename, content, isBase64, contentType = 'application/octet-stream' } = req.body;
+    if (!serverUrl || !filename) {
+      return res.status(400).json({ ok: false, error: 'Server URL and filename are required' });
+    }
+
+    let buffer;
+    if (isBase64) {
+      buffer = Buffer.from(content, 'base64');
+    } else if (typeof content === 'string') {
+      buffer = Buffer.from(content, 'utf8');
+    } else {
+      buffer = Buffer.from(JSON.stringify(content, null, 2), 'utf8');
+    }
+
+    const cleanBase = serverUrl.trim().replace(/\/+$/, '');
+    const cleanPath = path ? path.replace(/^\/+|\/+$/g, '') : '';
+    const fileUrl = cleanPath ? `${cleanBase}/${cleanPath}/${encodeURIComponent(filename)}` : `${cleanBase}/${encodeURIComponent(filename)}`;
+
+    const headers = {
+      'User-Agent': 'Eloqui-Backup-Engine',
+      'Content-Type': contentType,
+      'Content-Length': buffer.length.toString()
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token.trim()}`;
+    } else if (username && password) {
+      const credentials = Buffer.from(`${username.trim()}:${password.trim()}`).toString('base64');
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+
+    const davRes = await fetch(fileUrl, {
+      method: 'PUT',
+      headers,
+      body: buffer
+    });
+
+    if (davRes.ok || davRes.status === 201 || davRes.status === 204 || davRes.status === 200) {
+      return res.json({
+        ok: true,
+        message: `Successfully uploaded ${filename} via WebDAV`,
+        url: fileUrl,
+        path: `${cleanPath}/${filename}`
+      });
+    } else {
+      const errText = await davRes.text();
+      return res.status(davRes.status).json({ ok: false, error: `WebDAV upload error (${davRes.status}): ${errText.substring(0, 300)}` });
+    }
+  } catch (err) {
+    console.error('WebDAV upload error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// 5. Custom Webhook Remote Upload
+apiRouter.post('/backup/remote/webhook', async (req, res) => {
+  try {
+    const { endpointUrl, method = 'POST', headers = {}, secret, payload, filename } = req.body;
+    if (!endpointUrl) return res.status(400).json({ ok: false, error: 'Endpoint URL required' });
+
+    const bodyString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    const reqHeaders = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Eloqui-Backup-Engine',
+      'X-Eloqui-Backup': 'true',
+      'X-Eloqui-Filename': filename || 'backup.json',
+      'X-Eloqui-Timestamp': new Date().toISOString(),
+      ...headers
+    };
+
+    if (secret) {
+      const sig = crypto.createHmac('sha256', secret.trim()).update(bodyString).digest('hex');
+      reqHeaders['X-Eloqui-Signature'] = `sha256=${sig}`;
+    }
+
+    const whRes = await fetch(endpointUrl.trim(), {
+      method: method.toUpperCase(),
+      headers: reqHeaders,
+      body: bodyString
+    });
+
+    const respText = await whRes.text();
+    if (whRes.ok) {
+      return res.json({
+        ok: true,
+        message: `Webhook received payload with status ${whRes.status}`,
+        statusCode: whRes.status,
+        response: respText.substring(0, 300)
+      });
+    } else {
+      return res.status(whRes.status).json({
+        ok: false,
+        error: `Webhook returned status ${whRes.status}: ${respText.substring(0, 300)}`
+      });
+    }
+  } catch (err) {
+    console.error('Webhook backup error:', err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = { apiRouter };
+

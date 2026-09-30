@@ -29,10 +29,10 @@ interface DiffToken {
       <div class="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity" (click)="close.emit()"></div>
 
       <!-- Main Modal Card -->
-      <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col max-h-[92vh] z-10 animate-in zoom-in-95 duration-200">
+      <div class="relative w-full max-w-4xl bg-white dark:bg-zinc-900 text-gray-800 dark:text-zinc-200 rounded-2xl shadow-2xl border border-gray-200 dark:border-zinc-800 overflow-hidden flex flex-col max-h-[92vh] z-10 animate-in zoom-in-95 duration-200">
         
         <!-- Header -->
-        <div class="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gradient-to-r from-purple-50/70 via-indigo-50/50 to-white">
+        <div class="px-5 sm:px-6 py-4 border-b border-gray-100 dark:border-zinc-800 flex items-center justify-between bg-gradient-to-r from-purple-50/70 via-indigo-50/50 to-white dark:from-zinc-850 dark:via-purple-950/30 dark:to-zinc-900">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-purple-500/10">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -45,8 +45,8 @@ interface DiffToken {
             </div>
             <div>
               <div class="flex items-center gap-2">
-                <h2 class="text-base font-bold text-gray-900 tracking-tight">AI Paraphrasing & Style Transformer</h2>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+                <h2 class="text-base font-bold text-gray-900 dark:text-zinc-100 tracking-tight">AI Paraphrasing & Style Transformer</h2>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                   {{ detectedScope() }}
                 </span>
                 <button 
@@ -56,21 +56,27 @@ interface DiffToken {
                   [class.bg-emerald-50]="useSurroundingContext()"
                   [class.text-emerald-800]="useSurroundingContext()"
                   [class.border-emerald-200]="useSurroundingContext()"
+                  [class.dark:bg-emerald-950/60]="useSurroundingContext()"
+                  [class.dark:text-emerald-300]="useSurroundingContext()"
+                  [class.dark:border-emerald-800]="useSurroundingContext()"
                   [class.bg-gray-100]="!useSurroundingContext()"
                   [class.text-gray-600]="!useSurroundingContext()"
                   [class.border-gray-300]="!useSurroundingContext()"
+                  [class.dark:bg-zinc-800]="!useSurroundingContext()"
+                  [class.dark:text-zinc-400]="!useSurroundingContext()"
+                  [class.dark:border-zinc-700]="!useSurroundingContext()"
                   [title]="useSurroundingContext() ? 'Surrounding Context is ON - click to toggle OFF' : 'Surrounding Context is OFF - click to toggle ON'"
                 >
                   <span class="w-1.5 h-1.5 rounded-full" [class.bg-emerald-500]="useSurroundingContext()" [class.bg-gray-400]="!useSurroundingContext()"></span>
                   <span>Context: {{ useSurroundingContext() ? 'ON' : 'OFF' }}</span>
                 </button>
                 @if (isMatureRegister()) {
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-pink-100 text-pink-700 border border-pink-200">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800">
                     Mature 18+ Uncensored
                   </span>
                 }
               </div>
-              <p class="text-xs text-gray-500">
+              <p class="text-xs text-gray-500 dark:text-zinc-400">
                 {{ useSurroundingContext() ? 'Context-aware natural alternatives adapted to your exact document passage & register' : 'Standalone rewrites focused strictly on selected phrasing in isolation' }}
               </p>
             </div>
@@ -78,22 +84,22 @@ interface DiffToken {
 
           <div class="flex items-center gap-2">
             <!-- Active Model Selector Pill -->
-            <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-600 bg-white/90 border border-purple-200/80 px-2.5 py-1 rounded-xl shadow-2xs">
+            <div class="hidden sm:flex items-center gap-1.5 text-xs text-gray-600 dark:text-zinc-300 bg-white/90 dark:bg-zinc-800 border border-purple-200/80 dark:border-zinc-700 px-2.5 py-1 rounded-xl shadow-2xs">
               <span class="w-1.5 h-1.5 rounded-full bg-teal-500"></span>
-              <span class="text-[10px] uppercase font-bold text-gray-400">Model:</span>
+              <span class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-400">Model:</span>
               <select 
                 [ngModel]="modelService.taskRoles().paraphraseModelId" 
                 (ngModelChange)="onModelChange($event)"
-                class="bg-transparent font-semibold text-gray-800 outline-none cursor-pointer text-xs pr-1"
+                class="bg-transparent font-semibold text-gray-800 dark:text-zinc-200 outline-none cursor-pointer text-xs pr-1"
                 title="Change the AI model used for this paraphrasing session"
               >
-                <optgroup label="Curated Free Models">
+                <optgroup label="Curated Free Models" class="dark:bg-zinc-800">
                   @for (m of modelService.freeModels; track m.id) {
                     <option [value]="m.id">{{ m.name }} ({{ m.provider }})</option>
                   }
                 </optgroup>
                 @if (modelService.customModels().length > 0) {
-                  <optgroup label="Custom Endpoints">
+                  <optgroup label="Custom Endpoints" class="dark:bg-zinc-800">
                     @for (cm of modelService.customModels(); track cm.id) {
                       <option [value]="cm.id">{{ cm.name }}</option>
                     }
@@ -105,7 +111,7 @@ interface DiffToken {
             @if (hasReplaced()) {
               <button 
                 (click)="onUndo()" 
-                class="px-2.5 py-1 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-lg border border-amber-200 transition-colors flex items-center gap-1"
+                class="px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 rounded-lg border border-amber-200 dark:border-amber-800 transition-colors flex items-center gap-1 cursor-pointer"
                 title="Revert replacement"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
@@ -114,7 +120,7 @@ interface DiffToken {
             }
             <button 
               (click)="close.emit()" 
-              class="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+              class="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-zinc-200 rounded-lg hover:bg-gray-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               title="Close modal (Esc)"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -126,13 +132,13 @@ interface DiffToken {
         <div class="overflow-y-auto p-5 sm:p-6 space-y-5 flex-1 custom-scrollbar">
 
           <!-- Controls Section: Document Type & Paraphrase Style -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50/70 p-4 rounded-xl border border-gray-200/80">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50/70 dark:bg-zinc-850 p-4 rounded-xl border border-gray-200/80 dark:border-zinc-700">
             
             <!-- Document Type / Register Selector -->
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+              <label class="block text-xs font-bold text-gray-700 dark:text-zinc-300 mb-1.5 flex items-center justify-between">
                 <span>Document Register</span>
-                <span class="text-[10px] font-medium text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
+                <span class="text-[10px] font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.2 rounded border border-purple-200 dark:border-purple-800">
                   {{ selectedDocDef()?.category }}
                 </span>
               </label>
@@ -141,33 +147,33 @@ interface DiffToken {
                 <select 
                   [ngModel]="currentDocType()"
                   (ngModelChange)="onDocumentTypeChange($event)"
-                  class="w-full bg-white border border-gray-300 text-gray-900 text-xs font-medium rounded-xl px-3 py-2 pr-8 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all cursor-pointer shadow-2xs"
+                  class="w-full bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-zinc-100 text-xs font-medium rounded-xl px-3 py-2 pr-8 outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all cursor-pointer shadow-2xs"
                 >
-                  <optgroup label="Fiction & Creative">
+                  <optgroup label="Fiction & Creative" class="dark:bg-zinc-900">
                     @for (dt of getDocTypesByCategory('Fiction & Creative'); track dt.id) {
                       <option [value]="dt.id">{{ dt.name }}</option>
                     }
                   </optgroup>
                   
-                  <optgroup label="Academic & Research">
+                  <optgroup label="Academic & Research" class="dark:bg-zinc-900">
                     @for (dt of getDocTypesByCategory('Academic & Research'); track dt.id) {
                       <option [value]="dt.id">{{ dt.name }}</option>
                     }
                   </optgroup>
 
-                  <optgroup label="Legal & Regulatory">
+                  <optgroup label="Legal & Regulatory" class="dark:bg-zinc-900">
                     @for (dt of getDocTypesByCategory('Legal & Regulatory'); track dt.id) {
                       <option [value]="dt.id">{{ dt.name }}</option>
                     }
                   </optgroup>
 
-                  <optgroup label="Professional & Business">
+                  <optgroup label="Professional & Business" class="dark:bg-zinc-900">
                     @for (dt of getDocTypesByCategory('Professional & Business'); track dt.id) {
                       <option [value]="dt.id">{{ dt.name }}</option>
                     }
                   </optgroup>
 
-                  <optgroup label="Specialized & Media">
+                  <optgroup label="Specialized & Media" class="dark:bg-zinc-900">
                     @for (dt of getDocTypesByCategory('Specialized & Media'); track dt.id) {
                       <option [value]="dt.id">{{ dt.name }}</option>
                     }
@@ -175,16 +181,16 @@ interface DiffToken {
                 </select>
               </div>
 
-              <p class="text-[11px] text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">
+              <p class="text-[11px] text-gray-500 dark:text-zinc-400 mt-1.5 line-clamp-2 leading-relaxed">
                 {{ selectedDocDef()?.description }}
               </p>
             </div>
 
             <!-- Paraphrase Style Selector -->
             <div>
-              <label class="block text-xs font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+              <label class="block text-xs font-bold text-gray-700 dark:text-zinc-300 mb-1.5 flex items-center justify-between">
                 <span>Paraphrase Style</span>
-                <span class="text-[10px] font-medium text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200">
+                <span class="text-[10px] font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-1.5 py-0.2 rounded border border-indigo-200 dark:border-indigo-800">
                   {{ selectedStyleDef()?.badge }}
                 </span>
               </label>
@@ -192,14 +198,14 @@ interface DiffToken {
               <select 
                 [ngModel]="currentStyle()"
                 (ngModelChange)="onStyleChange($event)"
-                class="w-full bg-white border border-gray-300 text-gray-900 text-xs font-medium rounded-xl px-3 py-2 pr-8 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer shadow-2xs"
+                class="w-full bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-gray-900 dark:text-zinc-100 text-xs font-medium rounded-xl px-3 py-2 pr-8 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer shadow-2xs"
               >
                 @for (style of styles; track style.id) {
-                  <option [value]="style.id">{{ style.name }}</option>
+                  <option [value]="style.id" class="dark:bg-zinc-900">{{ style.name }}</option>
                 }
               </select>
 
-              <p class="text-[11px] text-gray-500 mt-1.5 line-clamp-2 leading-relaxed">
+              <p class="text-[11px] text-gray-500 dark:text-zinc-400 mt-1.5 line-clamp-2 leading-relaxed">
                 {{ selectedStyleDef()?.description }}
               </p>
             </div>
@@ -212,10 +218,16 @@ interface DiffToken {
             [class.from-indigo-50]="useSurroundingContext()"
             [class.via-purple-50]="useSurroundingContext()"
             [class.border-indigo-100]="useSurroundingContext()"
+            [class.dark:from-indigo-950/30]="useSurroundingContext()"
+            [class.dark:via-purple-950/30]="useSurroundingContext()"
+            [class.dark:border-indigo-900/50]="useSurroundingContext()"
             [class.from-slate-50]="!useSurroundingContext()"
             [class.via-gray-50]="!useSurroundingContext()"
             [class.border-gray-200]="!useSurroundingContext()"
-            class="to-white"
+            [class.dark:from-zinc-850]="!useSurroundingContext()"
+            [class.dark:via-zinc-800]="!useSurroundingContext()"
+            [class.dark:border-zinc-700]="!useSurroundingContext()"
+            class="to-white dark:to-zinc-900"
           >
             <div class="flex flex-wrap items-center justify-between gap-2.5">
               <div class="flex items-center gap-2">
@@ -229,21 +241,21 @@ interface DiffToken {
                 }
 
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="text-xs font-bold text-gray-900">Surrounding Context:</span>
+                  <span class="text-xs font-bold text-gray-900 dark:text-zinc-100">Surrounding Context:</span>
                   @if (useSurroundingContext()) {
-                    <span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-emerald-200">
+                    <span class="text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-emerald-200 dark:border-emerald-800">
                       ON &bull; Harmonized
                     </span>
                     @if (hasSurroundingContext()) {
-                      <span class="hidden sm:inline text-[11px] text-gray-500">
+                      <span class="hidden sm:inline text-[11px] text-gray-500 dark:text-zinc-400">
                         ({{ (contextBefore.length + contextAfter.length) || surroundingContext.length }} chars document context)
                       </span>
                     }
                   } @else {
-                    <span class="text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-slate-200">
+                    <span class="text-slate-700 dark:text-zinc-300 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-slate-200 dark:border-zinc-700">
                       OFF &bull; Standalone Mode
                     </span>
-                    <span class="hidden sm:inline text-[11px] text-gray-500">
+                    <span class="hidden sm:inline text-[11px] text-gray-500 dark:text-zinc-400">
                       (Rewriting selected snippet in isolation)
                     </span>
                   }
@@ -255,31 +267,32 @@ interface DiffToken {
                 @if (useSurroundingContext()) {
                   <button 
                     (click)="showContextViewer.set(!showContextViewer())"
-                    class="text-xs font-medium text-indigo-700 hover:text-indigo-900 flex items-center gap-1 cursor-pointer transition-colors"
+                    class="text-xs font-medium text-indigo-700 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-200 flex items-center gap-1 cursor-pointer transition-colors"
                     title="Inspect surrounding document context captured for this rewrite"
                   >
                     <span>{{ showContextViewer() ? 'Hide Context' : 'Inspect Context' }}</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" [class.rotate-180]="showContextViewer()"><polyline points="6 9 12 15 18 9"/></svg>
                   </button>
-                  <div class="h-3.5 w-px bg-indigo-200 hidden sm:block"></div>
+                  <div class="h-3.5 w-px bg-indigo-200 dark:bg-indigo-900/60 hidden sm:block"></div>
                 }
 
                 <!-- Context Toggle Switch Button -->
                 <button 
                   type="button" 
                   (click)="toggleSurroundingContext()"
-                  class="flex items-center gap-2 group cursor-pointer select-none bg-white/90 hover:bg-white px-2.5 py-1 rounded-lg border border-gray-200 shadow-2xs transition-all"
+                  class="flex items-center gap-2 group cursor-pointer select-none bg-white/90 dark:bg-zinc-800 hover:bg-white dark:hover:bg-zinc-750 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-zinc-700 shadow-2xs transition-all"
                   [attr.aria-checked]="useSurroundingContext()"
                   role="switch"
                   [title]="useSurroundingContext() ? 'Turn OFF surrounding context to rewrite in isolated standalone mode' : 'Turn ON surrounding context to blend with neighboring sentences'"
                 >
-                  <span class="text-xs font-medium text-gray-700 group-hover:text-gray-900">
+                  <span class="text-xs font-medium text-gray-700 dark:text-zinc-300 group-hover:text-gray-900 dark:group-hover:text-zinc-100">
                     {{ useSurroundingContext() ? 'Context Active' : 'Context Paused' }}
                   </span>
                   <div 
                     class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out"
                     [class.bg-purple-600]="useSurroundingContext()"
                     [class.bg-gray-300]="!useSurroundingContext()"
+                    [class.dark:bg-zinc-700]="!useSurroundingContext()"
                   >
                     <span 
                       class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out"
@@ -293,17 +306,17 @@ interface DiffToken {
 
             <!-- Descriptive text explaining current mode -->
             @if (useSurroundingContext()) {
-              <p class="text-[11px] text-gray-500 leading-relaxed">
+              <p class="text-[11px] text-gray-500 dark:text-zinc-400 leading-relaxed">
                 Alternatives strictly conform to surrounding verb tenses, narrative voice (1st/3rd person), dialogue cadence, and preceding/following sentence flow.
               </p>
             } @else {
-              <div class="flex items-center justify-between text-[11px] text-gray-500 leading-relaxed">
+              <div class="flex items-center justify-between text-[11px] text-gray-500 dark:text-zinc-400 leading-relaxed">
                 <p>
                   Rewriter focuses exclusively on the highlighted words in standalone isolation without factoring in surrounding document sentences or boundaries.
                 </p>
                 <button 
                   (click)="toggleSurroundingContext()" 
-                  class="ml-2 text-purple-700 hover:text-purple-900 font-semibold underline shrink-0 cursor-pointer text-xs"
+                  class="ml-2 text-purple-700 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-300 font-semibold underline shrink-0 cursor-pointer text-xs"
                 >
                   Turn ON
                 </button>
@@ -311,17 +324,17 @@ interface DiffToken {
             }
 
             @if (useSurroundingContext() && showContextViewer()) {
-              <div class="mt-2 pt-2 border-t border-indigo-100/80 text-xs text-gray-700 font-serif leading-relaxed bg-white/90 p-3 rounded-lg border border-indigo-100 shadow-2xs">
-                <div class="text-[10px] font-sans uppercase font-bold text-indigo-900/60 mb-1.5 tracking-wider flex items-center gap-1.5">
+              <div class="mt-2 pt-2 border-t border-indigo-100/80 dark:border-zinc-700 text-xs text-gray-700 dark:text-zinc-300 font-serif leading-relaxed bg-white/90 dark:bg-zinc-800/90 p-3 rounded-lg border border-indigo-100 dark:border-zinc-700 shadow-2xs">
+                <div class="text-[10px] font-sans uppercase font-bold text-indigo-900/60 dark:text-indigo-300/80 mb-1.5 tracking-wider flex items-center gap-1.5">
                   <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                   <span>Active Document Passage Snapshot:</span>
                 </div>
-                <div class="p-2 bg-gray-50/70 rounded border border-gray-100">
-                  <span class="text-gray-400 italic">{{ contextBefore ? '…' + contextBefore.slice(-250) : '(Start of section)' }} </span>
-                  <span class="bg-purple-100 text-purple-900 font-semibold px-1.5 py-0.5 rounded border border-purple-300 mx-1 inline shadow-2xs">
+                <div class="p-2 bg-gray-50/70 dark:bg-zinc-850 rounded border border-gray-100 dark:border-zinc-700">
+                  <span class="text-gray-400 dark:text-zinc-500 italic">{{ contextBefore ? '…' + contextBefore.slice(-250) : '(Start of section)' }} </span>
+                  <span class="bg-purple-100 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 font-semibold px-1.5 py-0.5 rounded border border-purple-300 dark:border-purple-700 mx-1 inline shadow-2xs">
                     {{ editableText() }}
                   </span>
-                  <span class="text-gray-400 italic"> {{ contextAfter ? contextAfter.slice(0, 250) + '…' : '(End of section)' }}</span>
+                  <span class="text-gray-400 dark:text-zinc-500 italic"> {{ contextAfter ? contextAfter.slice(0, 250) + '…' : '(End of section)' }}</span>
                 </div>
               </div>
             }
@@ -330,15 +343,15 @@ interface DiffToken {
           <!-- Original Selected Text Box & Custom Guidance -->
           <div class="space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="text-xs font-bold text-gray-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
                 <span>Selected Text</span>
-                <span class="text-gray-400 font-normal">({{ textWordCount() }} words, {{ editableText().length }} chars)</span>
+                <span class="text-gray-400 dark:text-zinc-500 font-normal">({{ textWordCount() }} words, {{ editableText().length }} chars)</span>
               </span>
 
               <!-- Quick action to toggle custom prompt -->
               <button 
                 (click)="showCustomGuidance.set(!showCustomGuidance())"
-                class="text-xs text-purple-700 hover:text-purple-900 font-medium flex items-center gap-1 transition-colors"
+                class="text-xs text-purple-700 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-300 font-medium flex items-center gap-1 transition-colors cursor-pointer"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>
                 <span>{{ showCustomGuidance() ? 'Hide Custom Guidance' : '+ Add Custom Direction' }}</span>
@@ -350,15 +363,15 @@ interface DiffToken {
                 [ngModel]="editableText()" 
                 (ngModelChange)="editableText.set($event)"
                 rows="2"
-                class="w-full text-xs sm:text-sm font-serif text-gray-800 bg-white border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all resize-y shadow-2xs"
+                class="w-full text-xs sm:text-sm font-serif text-gray-800 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all resize-y shadow-2xs"
                 placeholder="Type or select text to paraphrase..."
               ></textarea>
             </div>
 
             <!-- Optional Custom Instruction Field -->
             @if (showCustomGuidance()) {
-              <div class="bg-purple-50/60 p-3 rounded-xl border border-purple-100 flex items-center gap-2 animate-in fade-in duration-150">
-                <div class="text-purple-600 shrink-0">
+              <div class="bg-purple-50/60 dark:bg-purple-950/30 p-3 rounded-xl border border-purple-100 dark:border-purple-800/60 flex items-center gap-2 animate-in fade-in duration-150">
+                <div class="text-purple-600 dark:text-purple-400 shrink-0">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                 </div>
                 <input 
@@ -366,7 +379,7 @@ interface DiffToken {
                   [ngModel]="customInstruction()" 
                   (ngModelChange)="customInstruction.set($event)"
                   placeholder="Custom instruction (e.g., 'Make it more cynical', 'Adopt 1890s Victorian cadence', 'Tone down legal jargon')..."
-                  class="w-full bg-white border border-purple-200 text-xs text-gray-800 rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500"
+                  class="w-full bg-white dark:bg-zinc-800 border border-purple-200 dark:border-zinc-700 text-xs text-gray-800 dark:text-zinc-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-purple-500"
                 />
               </div>
             }
@@ -380,8 +393,8 @@ interface DiffToken {
                   (click)="showDiffMode.set(!showDiffMode())"
                   [class]="'px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ' + 
                     (showDiffMode() 
-                      ? 'bg-purple-50 text-purple-800 border-purple-300' 
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50')"
+                      ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700' 
+                      : 'bg-white dark:bg-zinc-800 text-gray-600 dark:text-zinc-400 border-gray-200 dark:border-zinc-700 hover:bg-gray-50 dark:hover:bg-zinc-700')"
                   title="Toggle visual diff highlighting changes"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
@@ -394,8 +407,8 @@ interface DiffToken {
                   (click)="toggleSurroundingContext()"
                   [class]="'px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer select-none ' + 
                     (useSurroundingContext() 
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
-                      : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-slate-100')"
+                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700' 
+                      : 'bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700')"
                   [title]="useSurroundingContext() ? 'Surrounding Context is ON - click to switch to Standalone mode' : 'Surrounding Context is OFF - click to switch to Context-Aware mode'"
                 >
                   <span class="w-2 h-2 rounded-full" [class.bg-emerald-500]="useSurroundingContext()" [class.bg-gray-400]="!useSurroundingContext()"></span>
@@ -427,12 +440,12 @@ interface DiffToken {
           <!-- Alternatives Output List -->
           <div class="space-y-3 pt-2">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-gray-700 uppercase tracking-wider">
+              <span class="text-xs font-bold text-gray-700 dark:text-zinc-300 uppercase tracking-wider">
                 AI Suggested Alternatives ({{ alternatives().length }})
               </span>
               @if (lastGeneratedRegister()) {
-                <span class="text-[11px] text-gray-400">
-                  Tuned for: <strong class="text-gray-600">{{ lastGeneratedRegister() }}</strong>
+                <span class="text-[11px] text-gray-400 dark:text-zinc-500">
+                  Tuned for: <strong class="text-gray-600 dark:text-zinc-300">{{ lastGeneratedRegister() }}</strong>
                 </span>
               }
             </div>
@@ -441,23 +454,23 @@ interface DiffToken {
               <!-- Loading Skeleton -->
               <div class="space-y-3">
                 @for (i of [1, 2, 3]; track i) {
-                  <div class="p-4 bg-white rounded-xl border border-gray-200 animate-pulse space-y-2">
+                  <div class="p-4 bg-white dark:bg-zinc-800 rounded-xl border border-gray-200 dark:border-zinc-700 animate-pulse space-y-2">
                     <div class="flex items-center justify-between">
-                      <div class="h-4 w-28 bg-gray-200 rounded-full"></div>
-                      <div class="h-4 w-16 bg-gray-100 rounded-full"></div>
+                      <div class="h-4 w-28 bg-gray-200 dark:bg-zinc-700 rounded-full"></div>
+                      <div class="h-4 w-16 bg-gray-100 dark:bg-zinc-750 rounded-full"></div>
                     </div>
-                    <div class="h-4 w-full bg-gray-100 rounded"></div>
-                    <div class="h-3 w-3/4 bg-gray-100 rounded"></div>
+                    <div class="h-4 w-full bg-gray-100 dark:bg-zinc-750 rounded"></div>
+                    <div class="h-3 w-3/4 bg-gray-100 dark:bg-zinc-750 rounded"></div>
                   </div>
                 }
               </div>
             } @else if (alternatives().length === 0) {
-              <div class="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200 space-y-2">
-                <div class="w-10 h-10 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center mx-auto text-base font-bold">
+              <div class="p-8 text-center bg-gray-50 dark:bg-zinc-800/60 rounded-2xl border border-dashed border-gray-200 dark:border-zinc-700 space-y-2">
+                <div class="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 flex items-center justify-center mx-auto text-base font-bold">
                   ✨
                 </div>
-                <p class="text-xs font-bold text-gray-700">No alternatives generated yet</p>
-                <p class="text-[11px] text-gray-500 max-w-sm mx-auto">
+                <p class="text-xs font-bold text-gray-700 dark:text-zinc-200">No alternatives generated yet</p>
+                <p class="text-[11px] text-gray-500 dark:text-zinc-400 max-w-sm mx-auto">
                   Select your desired document type and paraphrasing style above, then click <strong>Generate Alternatives</strong>.
                 </p>
               </div>
@@ -465,35 +478,35 @@ interface DiffToken {
               <!-- Cards List -->
               <div class="space-y-3">
                 @for (alt of alternatives(); track alt.text) {
-                  <div class="p-4 sm:p-5 bg-white rounded-2xl border border-gray-200/90 hover:border-purple-300 hover:shadow-md transition-all space-y-3 group">
+                  <div class="p-4 sm:p-5 bg-white dark:bg-zinc-850 rounded-2xl border border-gray-200/90 dark:border-zinc-700 hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all space-y-3 group">
                     
                     <!-- Card Header: Badges and Tone -->
                     <div class="flex flex-wrap items-center justify-between gap-2">
                       <div class="flex items-center gap-2">
-                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                           {{ alt.label || 'Natural Flow' }}
                         </span>
-                        <span class="text-xs text-gray-500 italic">
+                        <span class="text-xs text-gray-500 dark:text-zinc-400 italic">
                           {{ alt.tone }}
                         </span>
                       </div>
 
                       <div class="flex items-center gap-2">
-                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                           {{ alt.fitScore || 96 }}% Fit
                         </span>
                       </div>
                     </div>
 
                     <!-- Text Area (Normal or Diff View) -->
-                    <div class="text-sm sm:text-base font-serif text-gray-900 leading-relaxed bg-gray-50/50 p-3.5 rounded-xl border border-gray-100">
+                    <div class="text-sm sm:text-base font-serif text-gray-900 dark:text-zinc-100 leading-relaxed bg-gray-50/50 dark:bg-zinc-900 p-3.5 rounded-xl border border-gray-100 dark:border-zinc-800">
                       @if (showDiffMode()) {
                         <div class="diff-container leading-relaxed">
                           @for (token of getDiff(editableText(), alt.text); track $index) {
                             @if (token.type === 'added') {
-                              <span class="bg-emerald-100 text-emerald-900 px-1 py-0.2 rounded font-medium">{{ token.text }}</span>
+                              <span class="bg-emerald-100 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 px-1 py-0.2 rounded font-medium">{{ token.text }}</span>
                             } @else if (token.type === 'removed') {
-                              <span class="bg-rose-100 text-rose-800 line-through opacity-70 px-1 py-0.2 rounded mx-0.5">{{ token.text }}</span>
+                              <span class="bg-rose-100 dark:bg-rose-950/70 text-rose-800 dark:text-rose-300 line-through opacity-70 px-1 py-0.2 rounded mx-0.5">{{ token.text }}</span>
                             } @else {
                               <span>{{ token.text }}</span>
                             }
@@ -507,43 +520,43 @@ interface DiffToken {
 
                     <!-- Explanation -->
                     @if (alt.explanation) {
-                      <p class="text-xs text-gray-500 leading-relaxed">
-                        <span class="font-medium text-gray-700">Rationale:</span> {{ alt.explanation }}
+                      <p class="text-xs text-gray-500 dark:text-zinc-400 leading-relaxed">
+                        <span class="font-medium text-gray-700 dark:text-zinc-300">Rationale:</span> {{ alt.explanation }}
                       </p>
                     }
 
                     <!-- Live Passage Flow Preview -->
                     @if (previewContextForAlt() === alt.text) {
-                      <div class="p-3 bg-purple-50/80 border border-purple-200/90 rounded-xl text-xs sm:text-sm font-serif leading-relaxed text-gray-800 animate-in fade-in duration-150">
-                        <div class="text-[10px] font-sans uppercase font-bold text-purple-800 mb-1 flex items-center justify-between tracking-wider">
+                      <div class="p-3 bg-purple-50/80 dark:bg-purple-950/40 border border-purple-200/90 dark:border-purple-800/80 rounded-xl text-xs sm:text-sm font-serif leading-relaxed text-gray-800 dark:text-zinc-200 animate-in fade-in duration-150">
+                        <div class="text-[10px] font-sans uppercase font-bold text-purple-800 dark:text-purple-300 mb-1 flex items-center justify-between tracking-wider">
                           <div class="flex items-center gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                             <span>Full Passage Flow Preview:</span>
                           </div>
                           @if (!useSurroundingContext()) {
-                            <span class="text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded text-[9px] border border-amber-200 font-sans font-semibold">
+                            <span class="text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded text-[9px] border border-amber-200 dark:border-amber-800 font-sans font-semibold">
                               Generated in Standalone Mode
                             </span>
                           }
                         </div>
-                        <span class="text-gray-500">{{ getContextExcerptBefore() }}</span>
-                        <span class="bg-purple-200/90 text-purple-950 font-bold px-1.5 py-0.5 rounded shadow-2xs mx-1 inline border border-purple-300">
+                        <span class="text-gray-500 dark:text-zinc-400">{{ getContextExcerptBefore() }}</span>
+                        <span class="bg-purple-200/90 dark:bg-purple-900/60 text-purple-950 dark:text-purple-200 font-bold px-1.5 py-0.5 rounded shadow-2xs mx-1 inline border border-purple-300 dark:border-purple-700">
                           {{ alt.text }}
                         </span>
-                        <span class="text-gray-500">{{ getContextExcerptAfter() }}</span>
+                        <span class="text-gray-500 dark:text-zinc-400">{{ getContextExcerptAfter() }}</span>
                       </div>
                     }
 
                     <!-- Actions -->
-                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-100">
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-100 dark:border-zinc-700">
                       <div class="flex items-center gap-2">
                         <!-- Flow in Context Preview Toggle -->
                         <button 
                           (click)="toggleContextPreview(alt.text)"
                           [class]="'px-2.5 py-1 text-xs rounded-lg border transition-colors flex items-center gap-1.5 cursor-pointer ' + 
                             (previewContextForAlt() === alt.text 
-                              ? 'bg-purple-100 text-purple-900 border-purple-300 font-semibold' 
-                              : 'text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-100 border-gray-200')"
+                              ? 'bg-purple-100 dark:bg-purple-950/70 text-purple-900 dark:text-purple-200 border-purple-300 dark:border-purple-700 font-semibold' 
+                              : 'text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200 bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 border-gray-200 dark:border-zinc-700')"
                           title="Preview how this alternative reads inside your full surrounding passage"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -553,12 +566,12 @@ interface DiffToken {
                         <!-- Copy button -->
                         <button 
                           (click)="copyAlternative(alt.text)"
-                          class="px-2.5 py-1 text-xs text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors flex items-center gap-1.5"
+                          class="px-2.5 py-1 text-xs text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200 bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg border border-gray-200 dark:border-zinc-700 transition-colors flex items-center gap-1.5 cursor-pointer"
                           title="Copy to clipboard"
                         >
                           @if (copiedText() === alt.text) {
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span class="text-emerald-700 font-bold">Copied!</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600 dark:text-emerald-400"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span class="text-emerald-700 dark:text-emerald-300 font-bold">Copied!</span>
                           } @else {
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                             <span>Copy</span>
@@ -568,7 +581,7 @@ interface DiffToken {
                         <!-- Insert below button -->
                         <button 
                           (click)="onInsertBelow(alt.text)"
-                          class="px-2.5 py-1 text-xs text-gray-600 hover:text-gray-900 bg-white hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors flex items-center gap-1.5"
+                          class="px-2.5 py-1 text-xs text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200 bg-white dark:bg-zinc-800 hover:bg-gray-100 dark:hover:bg-zinc-700 rounded-lg border border-gray-200 dark:border-zinc-700 transition-colors flex items-center gap-1.5 cursor-pointer"
                           title="Insert as comparison on a new line below selection"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -596,7 +609,7 @@ interface DiffToken {
         </div>
 
         <!-- Footer -->
-        <div class="px-5 sm:px-6 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+        <div class="px-5 sm:px-6 py-3 bg-gray-50 dark:bg-zinc-900 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
           <div class="flex items-center gap-2">
             <span>Shortcut: <strong>Ctrl+Shift+P</strong> to paraphrase selection</span>
           </div>
@@ -604,7 +617,7 @@ interface DiffToken {
           <div class="flex items-center gap-3">
             <button 
               (click)="close.emit()" 
-              class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-200/80 transition-colors"
+              class="px-4 py-1.5 rounded-xl text-xs font-semibold text-gray-600 dark:text-zinc-400 hover:text-gray-900 dark:hover:text-zinc-200 hover:bg-gray-200/80 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             >
               Done
             </button>
